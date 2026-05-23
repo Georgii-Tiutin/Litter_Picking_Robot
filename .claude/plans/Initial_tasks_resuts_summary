@@ -898,3 +898,82 @@ reliability work continues to feed Phase 1.5 hardening. Phase 1.3
 robustness still pending from the 2026-05-15 bookmark.
 
 ---
+
+## Session 2026-05-23 — GitHub repository restructure (portfolio topology)
+
+**Theme:** Non-code session. Reshaped the GitHub repo's branch/commit
+topology for portfolio / admissions visibility (per `before_starting.md`
+Part 2, "Gitflow Lite"). No robot-side or perception changes.
+
+**Context entered from:** `before_starting.md`. Confirmed the actual repo
+state still diverges from that doc's assumptions — `CLAUDE.md` is empty,
+the detector experiments still live in `perception/scripts/`, no colcon
+workspace, and the real ROS 2 stacks live on the Jetson
+(`~/yahboomcar_ws`, `~/M3Pro_ws`), so this Mac repo is a dev/calibration/
+docs repo rather than the deployment target. Those checklist items remain
+**open** (see below).
+
+**Final topology** (`github.com/Georgii-Tiutin/Litter_Picking_Robot`):
+
+```
+*   cube-detector-v1   "Cube detector v1"  (merge of calibration + perception)
+|\
+| *  perception        base + perception/
+* |  calibration       base + calibration/
+|/
+| *  color-tracking    base + color_tracking_orin.py   (standalone)
+|/
+| *  main  default     base + 3 plan docs              (standalone)
+|/
+*   base               computer vision WITHOUT cube detector v1
+                       (no calibration/, perception/, color_tracking_orin.py, plans)
+```
+
+| Branch | Tree | Current tip |
+|---|---|---|
+| `main` (default) | base + `.claude/plans/{before_starting,extension_claude,plan_claude}.md` + `README.md` | `0b34e0e` |
+| `calibration` | base + `calibration/` | `afbe476` |
+| `perception` | base + `perception/` | `1207f6e` |
+| `color-tracking` | base + `color_tracking_orin.py` (standalone, not merged) | `de7d12a` |
+| `cube-detector-v1` | merge of calibration + perception (= original `a53f0c0` content minus the color file); README ends "Branch abandoned due to a change of plans." | `835b2c8` |
+
+**How it evolved (user-directed iterations):**
+1. Additive folder-only orphan branches + a plans "addon" commit on
+   `main` (no force-push).
+2. Reshaped to a `base → calibration/perception → merge` graph with
+   `main` beside the merge — required rewriting and **force-pushing**
+   history.
+3. Extracted `color_tracking_orin.py` out of `base` onto its own
+   standalone `color-tracking` branch — another force-push rewrite.
+4. Added a per-branch `README.md` to all five branches (additive,
+   fast-forward) as the GitHub-visible equivalent of a branch
+   description, since GitHub has **no native branch-description field**.
+
+**Technical notes / lessons:**
+- All history surgery used git plumbing (`commit-tree`,
+  `read-tree --prefix`, `update-index --cacheinfo`) so the working tree
+  was never disturbed.
+- **zsh gotcha:** `"$VAR:path"` triggers zsh's `:c` history modifier
+  (turned `$A:calibration` into `a53f0c0alibration`), and `set -e` does
+  **not** abort under this shell — a malformed calibration branch slipped
+  through one build and had to be rebuilt. Use quoted *literal* revspecs
+  (`"a53f0c0:calibration"`) and verify outputs explicitly.
+- View the topology on GitHub at **Insights → Network** (`/network`) —
+  **not** the Dependency graph (that needs a package manifest and shows
+  library deps, not branches).
+
+**Local state preserved:** `calibration/`, `perception/`, and
+`color_tracking_orin.py` remain on disk (now untracked on `main`, tracked
+on their own branches); the unstaged `.claude/settings.local.json` edit was
+never committed.
+
+**Still open (from `before_starting.md`, untouched this session):** colcon
+workspace decision, `.gitignore` for model weights / ROS bags / datasets,
+archive the stale detector experiments, populate the empty `CLAUDE.md`,
+`CHANGELOG.md` + `RELEASING.md`, git-flow tooling.
+
+**Task list status:** No formal task opened/closed — repo hygiene /
+portfolio work, separate from the Phase 1 perception track, which remains
+where the 2026-05-16 bookmark left it (Phase 1.3 robustness still pending).
+
+---
