@@ -1,0 +1,21 @@
+# macOS junk
+.DS_Store
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime logs
+logs/
+
+# Symlink to external docs repo (already version-controlled elsewhere)
+ROSMASTER-M3PRO-DOCS-MD
+
+# Local editor / IDE
+.vscode/
+.idea/
+
+# Virtual envs
+.venv/
+venv/

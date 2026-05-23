@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh:*)",
+      "Bash(networksetup -getairportnetwork en0)",
+      "Bash(iwgetid -r)",
+      "Bash(scp:*)",
+      "Bash(ssh -i ~/.ssh/id_ed25519 jetson@192.168.50.103 \"tail -5 ~/orbbec_camera.log && echo ''---'' && export ROS_DOMAIN_ID=30 && source /opt/ros/humble/setup.bash && timeout 5 ros2 topic hz /camera/color/image_raw --window 3 2>&1 || true\")",
+      "Bash(ln -s /Users/georgiitiutin/Documents/Projects/robotdoc/agents/generic-rosmaster-m3pro.md .claude/agents/generic-rosmaster-m3pro.md)",
+      "Bash(ln -s /Users/georgiitiutin/Documents/Projects/robotdoc/ROSMASTER-M3PRO-DOCS-MD ROSMASTER-M3PRO-DOCS-MD)",
+      "Bash(for d:*)",
+      "Bash(do echo:*)",
+      "Read(//Users/georgiitiutin/Documents/Projects/Project0/ROSMASTER-M3PRO-DOCS-MD/5.Chassis Control Course/**)",
+      "Bash(done)",
+      "Bash(mkdir -p /Users/georgiitiutin/Documents/Projects/Project0/.claude/Robot_info)",
+      "Bash(mv /Users/georgiitiutin/Documents/Projects/Project0/.claude/plans/success_metrics.md /Users/georgiitiutin/Documents/Projects/Project0/.claude/plans/system_architecture.md /Users/georgiitiutin/Documents/Projects/Project0/.claude/plans/tf_tree_spec.md /Users/georgiitiutin/Documents/Projects/Project0/.claude/Robot_info/)",
+      "Bash(rsync -av -e \"ssh -i ~/.ssh/id_ed25519\" --exclude build --exclude install --exclude log jetson@192.168.50.103:~/m3pro_gazebo_ws/src/m3pro_gazebo/ ~/Documents/Projects/m3pro_gazebo/)",
+      "Bash(rsync -av -e \"ssh -i ~/.ssh/id_ed25519\" ~/Documents/Projects/m3pro_gazebo/README.md ~/Documents/Projects/m3pro_gazebo/.gitignore jetson@192.168.50.103:~/m3pro_gazebo_ws/src/m3pro_gazebo/)",
+      "Bash(python3 -c \"import cv2; print\\('cv2', cv2.__version__\\); print\\('aruco?', hasattr\\(cv2, 'aruco'\\)\\); print\\('apriltag dict?', hasattr\\(cv2.aruco, 'DICT_APRILTAG_36h11'\\) if hasattr\\(cv2,'aruco'\\) else 'no'\\)\")",
+      "Bash(wait)",
+      "Bash(ping -c 2 -t 3 192.168.50.103)",
+      "Bash(ping -c 2 -t 3 192.168.8.88)",
+      "Bash(python3 -m py_compile /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector_red.py)",
+      "Bash(python3 -m py_compile /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/hsv_tuner_red.py)",
+      "Bash(python3 -m py_compile /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector.py)",
+      "Bash(python3 -m py_compile /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/hsv_tuner.py)",
+      "Bash(brctl status *)",
+      "Bash(md5 -r /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector.py)",
+      "Bash(python3 -c \"import ast,sys; ast.parse\\(open\\('/Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('/Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(python3 -c \"import ast; ast.parse\\(open\\('/Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector_v1.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(md5 -r /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector_v1.py)",
+      "Bash(md5 /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/hsv_tuner.py /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector_v1.py)",
+      "Bash(md5 /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector_v1.py)",
+      "Bash(gh auth *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  },
+  "plansDirectory": ".claude/plans"
+}

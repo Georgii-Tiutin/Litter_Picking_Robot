@@ -1,0 +1,900 @@
+# Initial Tasks — Results Summary
+
+Per-subsection summaries of work completed against `initial_tasks`.
+Add a new entry below each subsection as it is closed out.
+
+---
+
+## Phase 0: Foundations
+
+### 0.1 Hardware & assumptions — 2026-04-08 — DONE (with open items)
+
+**Method:** live SSH session to robot at `192.168.50.103` (user `jetson`),
+inspected `/proc`, `lsusb`, `dpkg -l`, udev rules, both ROS 2 workspaces,
+URDF, and startup scripts.
+
+**Confirmed:**
+- Robot: Yahboom ROSMASTER M3PRO, hostname `yahboom`
+- Compute: Jetson Orin NX 8 GB (Engineering Reference Dev Kit Super),
+  Ubuntu 22.04.5 LTS, JetPack 6.x (L4T R36.4.7), kernel 5.15.148-tegra,
+  1 TB NVMe (80 GB used)
+- ROS 2: Humble, FastDDS, `ROS_DOMAIN_ID=30`
+- Arm: 6 DOF (from `arm_msgs/ArmJoints.msg` joint1..joint6), 2-finger
+  parallel gripper (URDF `llink`/`rlink`), custom `arm_kin` package
+- Camera: Orbbec DaBai DCW2 RGB-D (USB `2bc5:0561` / `2bc5:06a0`),
+  driver via `OrbbecSDK_ROS2` built in `yahboomcar_ws`
+- Control board: STM32 via CP2104 serial (`/dev/myserial`), micro-ROS
+  at 2,000,000 baud, launched from `~/start_agent.sh`
+- Workspaces on robot: `~/yahboomcar_ws` (arm, Orbbec, YOLOv8, MoveIt,
+  mediapipe), `~/M3Pro_ws` (navigation, slam_mapping, calibration,
+  patrol, ira_laser_tools, yahboom_laser_filter, slam_gmapping,
+  imu_tools, multi_brains, large model stack)
+
+**Key finding — LiDAR status unresolved:**
+No physical LiDAR driver package (ldlidar / rplidar / ydlidar / sllidar)
+exists in either workspace or as a debian. `laser_driver.launch.py`
+only brings up `ira_laser_tools` merging `/scan0` + `/scan1` and
+`yahboom_laser_filter`. `ros-humble-depthimage-to-laserscan` is
+installed. This strongly suggests `/scan*` may be derived from the
+Orbbec depth camera rather than a physical scanner — but it could
+also be that a LiDAR driver lives elsewhere (e.g. Docker image, or
+loaded by a launcher we haven't read). Needs physical inspection
+and a runtime test.
+
+**Deliverable:** `/Users/georgiitiutin/Documents/Projects/Project0/HARDWARE.md`
+
+**Open items carried forward:**
+1. Confirm LiDAR: visually inspect robot; run `ros2 launch
+   yahboom_M3Pro_laser laser_driver.launch.py` + `ros2 topic hz
+   /scan_multi` + `ros2 topic info -v /scan0` to trace source.
+2. Arm reach, payload, gripper opening width — pull from Yahboom
+   M3PRO datasheet or measure directly.
+3. Arm servo effort/current feedback — echo arm state topic to
+   confirm. Critical for Phase 5.6 grasp confirmation.
+4. Orbbec DaBai DCW2 depth range / FOV / min range — from datasheet.
+5. STM32 variant (H743 assumed per Yahboom docs) — confirm on unit.
+
+**Task list status:** 0.1 marked done; robot/camera/docs fully
+confirmed, arm and LiDAR partially confirmed with explicit open
+items recorded in HARDWARE.md.
+
+---
+
+### 0.2 Coordinate frames & TF — 2026-04-08 — DONE
+
+**Method:** parsed `yahboom_M3Pro_description/urdf/M3Pro.urdf` with
+`check_urdf` and Python `xml.etree`; grepped both ROS 2 workspaces for
+references to suspect link/joint names; inspected `arm_driver.py` and
+`M3Pro_demo/launch/camera_arm_kin.launch.py` to identify actual runtime
+wiring; wrote a project-local static TF launcher on the robot and
+smoke-tested it with a live `ros2 launch` + log confirmation.
+
+**Deliverables:**
+- `.claude/Robot_info/tf_tree_spec.md` — canonical TF tree, runtime
+  publishers, dropped/ignored frames, URDF quirks, eye-in-hand
+  consequences, bringup sequence
+- `~/project0/launch/static_tfs.launch.py` on robot — publishes
+  `DCW2 → camera_link` (identity placeholder, to be replaced by
+  hand-eye calibration output in Phase 0.6)
+- `HARDWARE.md` — corrections applied (arm DOF, serial bus, eye-in-hand,
+  second-camera absence, resolved-items log)
+
+**Key corrections to earlier assumptions:**
+1. Arm is **5 DOF + gripper**, not 6 DOF. `arm_driver.py` drives 6 servos
+   via `set_uart_servo_angle_array`; the 6th is the gripper (`rlink1`).
+   5-DOF means grasp planning must constrain to vertical approaches.
+2. Arm servos run on **`/dev/ttyUSB0`** direct, not through the STM32
+   micro-ROS pipe. Only the chassis goes via micro-ROS.
+3. The Orbbec DaBai DCW2 is **eye-in-hand on `arm4`**. The URDF
+   `DCW2_Joint` is fixed to `arm4`. Camera pose is not fixed relative to
+   `base_link`; perception must use live TF lookups. Hand-eye
+   calibration (0.6) is on the critical path for grasp accuracy.
+4. The URDF link `Camera` on `base_link` is **stale** — no physical
+   device. Kept in URDF only because `M3Pro.srdf` references it in
+   disable-collisions entries.
+5. `arm_base_Link` is an **orphan** — fixed child of `base_link` but not
+   in the kinematic chain. Dropped from the target TF tree.
+6. `arm4_Joiint` (double `i`) is a URDF typo propagated through the
+   entire MoveIt config stack (`ros2_control.xacro`, `ros2_controllers.yaml`,
+   `joint_limits.yaml`, `initial_positions.yaml`, `srdf`,
+   `moveit_controllers.yaml`). Left as-is because fixing in one place
+   would break the stack. Any code referencing the joint by name must
+   use the typo spelling.
+
+**Target TF tree (finalized):**
+
+```
+map → odom → base_link → arm1 → arm2 → arm3 → arm4 → arm5 → Gripping (TCP)
+                                              └── DCW2 → camera_link
+                                                         ├── camera_color_optical_frame
+                                                         └── camera_depth_optical_frame
+```
+
+`map`/`odom` come from SLAM + chassis odom (runtime). `base_link → arm*
+→ Gripping` come from `robot_state_publisher` (URDF). `DCW2 → camera_link`
+is the new static TF. The optical frames come from the Orbbec driver.
+
+**Smoke test result:** `ros2 launch ~/project0/launch/static_tfs.launch.py`
+starts `static_transform_publisher` which logs
+`Spinning until stopped - publishing transform / from 'DCW2' to
+'camera_link'` with identity translation/rotation. Launcher is valid.
+
+**Nothing modified on the robot beyond creating `~/project0/launch/`.**
+No URDF or Yahboom package files were edited. Fixing the typo or removing
+the stale `Camera`/`arm_base_Link` links would require coordinated edits
+to the MoveIt configs and was explicitly skipped.
+
+**Open items carried forward (unchanged from 0.1, plus new):**
+- [0.1 items still open] LiDAR confirmation, arm reach/payload datasheet,
+  arm servo effort feedback, Orbbec datasheet specs, STM32 variant.
+- [new] `DCW2 → camera_link` static TF is an **identity placeholder**.
+  Must be replaced with calibrated values from hand-eye calibration
+  (Phase 0.6) before grasp poses can be trusted.
+
+**Task list status:** 0.2 marked done.
+
+---
+
+### 0.3 Success metrics — 2026-04-08 — DONE
+
+**Method:** paperwork-only. Drafted an initial metrics specification
+drawing on the hardware constraints already captured in `HARDWARE.md`
+and `Keep_in_mind` (5-DOF arm, eye-in-hand, pre-calibration bias, LiDAR
+uncertainty).
+
+**Deliverable:** `.claude/Robot_info/success_metrics.md`
+
+**Contents:**
+- **Overall criterion:** ≥ 90% end-to-end success over 10 consecutive
+  trials from a reset starting pose. Success = cube inside bin at
+  verification time.
+- **Graded tiers:** S (clean success), A (success with recovery), B
+  (no cube in bin, no damage), F (collision / drop / timeout / e-stop).
+  S and A both count toward the 90% target; A and B/F are logged
+  separately for regression tracking.
+- **Per-phase metrics tables** for Phases 1–8 with target numbers and
+  measurement method (TP/FP rates, position RMSE, nav arrival error,
+  grasp success, drop rate, etc.).
+- **Timeout budgets:** 3 s detect / 2 s pose filter / 45 s nav-to-cube /
+  20 s pickup / 45 s nav-to-bin / 15 s placement / 15 s verification
+  → **end-to-end cycle ≤ 150 s (2.5 min)**.
+- **Logging contract:** per-trial directory
+  `~/project0/trials/<YYYY-MM-DD>/<trial-id>/` with phase timestamps,
+  verdict, observation image, gripper effort trace, TF snapshot at
+  grasp, and any MoveIt planning failures.
+- **Known biases explicitly flagged in the doc:**
+  - Pre-0.6 calibration: Phase 2 position error has unknown constant
+    offset; do not validate against ground truth until 0.6 lands.
+  - LiDAR uncertainty (0.1 open item): if scan source is
+    depth-camera-derived rather than a physical LiDAR, lower the
+    AMCL target from 5 cm to 10 cm RMSE.
+  - 5-DOF arm: Phase 5 reachability target assumes the grasp planner
+    constrains to vertical approaches.
+
+**Nothing built or deployed.** No robot-side changes. Targets are
+initial drafts and will be revised after the first real 10-trial run
+surfaces unrealistic numbers.
+
+**Task list status:** 0.3 marked done.
+
+---
+
+### 0.4 System architecture — 2026-04-08 — DONE
+
+**Method:** paperwork-only. Inventoried reusable upstream nodes
+(Yahboom arm_driver, arm_kin, orbbec_camera, Nav2, slam_toolbox,
+micro_ros_agent, robot_state_publisher) and designed 7 new project0
+nodes on top. Evaluated BT.CPP vs SMACH and chose BT.CPP. Sketched the
+full state machine with per-phase failure transitions and a shared
+RECOVER subtree.
+
+**Deliverable:** `.claude/Robot_info/system_architecture.md`
+
+**Key decisions:**
+- **7 new nodes, reuse everything else.** perception_node,
+  pose_estimator_node, grasp_planner_node, arm_control_node,
+  bin_provider_node, orchestrator_node, trial_logger_node. All other
+  stack (URDF, arm driver, Orbbec, Nav2, SLAM, micro-ROS) is reused
+  as-is with zero modification.
+- **Message discipline:** standard types first. Zero new custom
+  messages. Two deferred actions (`ExecuteGrasp`, `Observe`) only
+  when actually needed in Phase 1/5.
+- **Framework: BehaviorTree.CPP v4.** Rationale: ROS 2 native,
+  already pulled in by Nav2, active maintenance, Groot2 visual debug,
+  cleaner failure-recovery patterns than SMACH. Trade-off: C++ for
+  the tree root (worker nodes remain Python).
+- **Orchestrator owns all sequencing.** Worker nodes are dumb
+  executors that expose actions/services and know nothing about the
+  state machine.
+- **State machine:** BOOT → OBSERVE → NAV_TO_CUBE → PICKUP →
+  NAV_TO_BIN → PLACE → VERIFY → {IDLE | RECOVER → OBSERVE}.
+  Per-phase failure policies encoded as BT fallbacks with retry
+  counts; wall-clock budgets from `success_metrics.md` enforced at
+  the phase level. Shared RECOVER subtree drops anything held,
+  tucks arm, cancels Nav2, re-localizes, returns to OBSERVE;
+  double-RECOVER in one trial = abort to human.
+
+**Explicit non-goals (documented to resist scope creep):**
+- No microservices / HTTP.
+- No lifecycle nodes yet.
+- No database (flat-file trial logs).
+- No dashboard (RViz + Groot2 + `ros2 topic echo`).
+- No per-phase dedicated node (single BT orchestrator).
+
+**Open questions flagged in the doc:**
+- Effort/current reading availability from arm servos (affects
+  grasp-confirmation source in `arm_control_node`). Tracks the 0.1
+  open item. Design allows fallback to vision-based confirmation.
+- Bin detection strategy: start with saved config pose, upgrade to
+  AprilTag later.
+- C++ vs Python orchestrator (BT.CPP vs py_trees_ros): revisit after
+  first prototype.
+
+**Nothing built or deployed.** No robot-side changes. No ROS package
+scaffolding yet — that happens when Phase 1 begins.
+
+**Task list status:** 0.4 marked done.
+
+---
+
+### 0.5 Simulation setup — 2026-04-15 — DONE
+
+**Method:** executed separately as `sim_plans` S.1–S.8 (full detail in
+`sim completed`). Summary only here.
+
+**Delivered:**
+- `m3pro_gazebo` ROS 2 package on the Jetson (`~/m3pro_gazebo_ws/src/m3pro_gazebo/`) and on the Mac (`~/Documents/Projects/m3pro_gazebo/`), committed to local git (`9fcf914` on `main`, no remote yet).
+- Ignition Fortress (Gazebo 6.16) + `ros_gz` bridge + `gz_ros2_control` stack installed and verified. Gazebo Classic abandoned during S.1 because the Humble repo has dropped Classic bindings.
+- URDF converted to xacro with `use_sim` toggle; Yahboom inertials/collisions preserved; `arm4_Joiint` typo intentionally kept.
+- Two worlds: `empty.sdf` (smoke tests) and `tabletop.sdf` (red cube + blue open-top bin on ground plane; no literal tabletop — M3PRO is a floor robot).
+- Top-level bringup `sim.launch.py` with auto-unset of `FASTRTPS_DEFAULT_PROFILES_FILE` (the Yahboom bashrc ships a FastDDS XML that whitelists `0.0.0.0` and silently breaks local DDS).
+- Topic contract matches the real robot: `/cmd_vel`, `/odom`, `/joint_states`, `/tf`, `/camera/color/image_raw`, `/camera/depth/image_raw`, `/camera/color/camera_info`, `/arm_controller`, `/gripper_controller`.
+
+**S.7 verification results (all on `ROS_DOMAIN_ID=0`):** robot spawns, TF tree matches `tf_tree_spec.md`, RGB ~19 Hz / depth ~18 Hz, arm + gripper trajectory actions both SUCCEEDED, `/cmd_vel` moves the model, `/odom` at ~37 Hz.
+
+**Architectural concessions (all documented in `sim completed` and the package README):**
+- **Kinematic base via `VelocityControl`**, not friction-based diff-drive. Fortress could not generate wheel-ground traction for URDF-spawned models (tested DART + Bullet; mesh, cylinder, and sphere collisions; explicit friction on both surfaces; raised base-link collision). Robot slides rather than rolls. Adequate for perception, arm, and nav path planning; not for wheel-slip studies.
+- **Mecanum strafe not simulated.**
+- **Servo effort not modelled** — grasp-confirmation-via-effort (see 0.1 open item) must be validated on hardware.
+- **Parallel-gripper grasp physics unreliable** in Gazebo for small objects. Sim is for logic validation, not grasp tuning.
+- **Orbbec depth noise profile not reproduced.**
+- **RViz + Gazebo + camera rendering OOMs the Jetson Orin NX 8 GB** — launch with `rviz:=false` and start RViz separately when needed.
+
+**Safety bug caught in S.7:** the Yahboom bashrc sets `ROS_DOMAIN_ID=30`, shared with the real robot. A sim `/cmd_vel` published on domain 30 drove the real chassis off the table (no damage). Fix cannot be automated inside the launch file (domain must be set before launch). Documented as SAFETY CRITICAL: **always `export ROS_DOMAIN_ID=0` before launching sim.**
+
+**Task list status:** 0.5 marked done.
+
+---
+
+### 0.6.1 Camera intrinsics — 2026-05-03 — DONE
+
+**Method:** captured factory intrinsics published by the Orbbec DCW2
+driver. The DCW2 ships factory intrinsics burned into the device
+EEPROM; the `OrbbecSDK_ROS2` driver republishes them as standard
+`sensor_msgs/CameraInfo` on `/camera/color/camera_info` and
+`/camera/depth/camera_info`. Snapshotted with
+`ros2 topic echo --once` and converted to standard
+`camera_info_manager` YAML.
+
+**Deliverables (Mac canonical + robot mirror at `~/project0/calibration/`):**
+- `Project0/calibration/camera_intrinsics_color.yaml`
+- `Project0/calibration/camera_intrinsics_depth.yaml`
+- `Project0/calibration/camera_info_*_raw.txt` (raw provenance, robot only)
+- `Project0/calibration/README.md`
+- `Project0/calibration/apriltag36h11_id0_80mm_300dpi.png`
+  (generated for upcoming 0.6.2 hand-eye step)
+
+**Captured intrinsics (RGB, 640×480, `rational_polynomial`):**
+- `fx = 479.471, fy = 479.388` (delta 0.02% — no aspect-ratio bug)
+- `cx = 322.111, cy = 239.658` (slight off-center, physically realistic)
+- Distortion: `k1=-0.018, k2=0.005, p1≈9e-5, p2≈-2.7e-4`, k3..k6=0
+  (suggests device returns coefficients for an already-rectified image)
+
+**Decision: skip checkerboard.** Factory intrinsics are sufficient for
+cube grasp at 200–400 mm; position error in that range is dominated by
+depth noise, not lens distortion. Re-running checkerboard would not
+move the needle. Fallback: if Phase 2 position error proves
+lens-bound, run `camera_calibration` with a 10×7 / 25 mm checkerboard.
+
+**Driver behaviour caught (worth flagging for Phase 2):**
+The launcher exposes `depth_registration:=false` as default, but the
+driver nevertheless publishes depth in `camera_color_optical_frame`
+at 640×480 (color resolution, not the depth sensor's native 640×400)
+with the **color** camera matrix. Project0 perception bringup must
+set `depth_registration:=true` explicitly — both as documentation and
+to guard against driver behaviour drift on a future SDK upgrade.
+With registration on, sampling depth at the cube centroid uses the
+**color** intrinsics; the depth intrinsics file is kept only for
+symmetry.
+
+**Validation:** RGB 28.7 Hz, depth 9.06 Hz — match the rates measured
+in 0.5 sim S.7 (~19 / ~18 Hz in sim, real device runs faster).
+
+**Open items carried forward:**
+- 0.6.2 hand-eye still required to replace the
+  `DCW2 → camera_link` identity placeholder static TF from 0.2.
+  Calibration target generated and waiting on print + mount.
+
+**Task list status:** 0.6.1 marked done. 0.6.2 / 0.6.3 still open.
+
+---
+
+### 0.6.2 Hand-eye calibration — 2026-05-04 — DONE (with documented residual floor)
+
+**Method:** AprilTag36h11 ID=0 (80 mm, printed and mounted on book),
+27 commanded arm poses spanning the reachable workspace, captured with
+`scripts/capture_handeye.py` using `dt_apriltags` for tag pose +
+`arm_kin/get_kinemarics` FK service for `base_link → endeffector` pose,
+then solved with `cv2.calibrateHandEye(method=PARK)`.
+
+**Deliverables (Mac canonical + robot mirror at `~/project0/calibration/`):**
+- `calibration/hand_eye_endeffector_to_camera.yaml` — calibrated 4×4 transform
+- `calibration/handeye_captures.json` — raw 27 captures (joints + tag pose)
+- `calibration/handeye_captures/cap_NNN.png` — per-capture annotated PNGs
+- `calibration/scripts/capture_handeye.py` — capture node with preset cycling
+- `calibration/scripts/solve_handeye.py` — AX=XB solver
+- `calibration/scripts/bringup_handeye.sh` — Orbbec + kin_srv launcher
+
+**Final calibrated transform (PARK, n=27):**
+- translation: `(-0.107, -0.015, -0.097) m` (magnitude 145 mm — physically
+  consistent with camera-on-arm4 vs gripper-on-arm5 geometry)
+- rpy: `(1.326, -0.209, -1.344) rad = (76°, -12°, -77°)`
+
+**Residuals (well above target):**
+| metric | mean | median | target |
+|---|---|---|---|
+| AX=XB rotation | 19.3° | 13.7° | < 1° |
+| AX=XB translation | 142 mm | 82 mm | < 5 mm |
+
+**Root causes for the floor (in descending impact):**
+1. **Open-loop joints** — M3PRO bus servos have no position readback;
+   FK trusts commanded angles. Servo deadband + gear backlash +
+   gravity-load deflection accumulate to ~10–25 mm / 5–10° EE error.
+2. **5DOF arm with limited reach diversity** — empirical tag-distance
+   variation across 27 wide-spread poses was only 38 mm. AX=XB is
+   poorly conditioned without translational diversity.
+3. **URDF link-length tolerances** — hobby-grade URDFs typically have
+   1–3 mm bias per link.
+4. **AprilTag detection noise** at ~80–120 px tag size: ~0.5–1° rotation
+   precision per detection.
+5. **Camera physically on arm4, FK chain ends on arm5** — joint5
+   variations during capture make the gripper→camera transform
+   weakly pose-dependent (estimated ≤ 35 mm error at joint5 = 60 or 120).
+
+**Investigations conducted before accepting these numbers:**
+- All four solver methods (TSAI, PARK, HORAUD, DANIILIDIS) gave
+  similar residuals; PARK won by ~1°.
+- Tested 14-capture conservative subset: residuals dropped to 8°/38 mm
+  but produced translation magnitude 370 mm — physically impossible
+  (>arm length). Rejected as overfitting due to insufficient rotation
+  diversity allowing AX=XB ambiguity.
+- Tested iterative outlier pruning: removing wide-rotation captures
+  cosmetically improved per-capture metrics but moved the solution
+  away from the physically plausible answer. Rejected.
+- Final acceptance: 27-capture PARK is the right answer; residuals
+  reflect the noise floor of this particular hardware setup.
+
+**Implications for downstream phases:**
+- **Phase 2 (position estimation):** can use this calibration for
+  *coarse* cube localisation (~5 cm accuracy). Don't trust for direct
+  grasp.
+- **Phase 5 (pickup):** must use **visual servoing for the final 5–10 cm
+  approach**. The calibration places the cube within the workspace
+  bbox; vision-in-loop closes the residual gap.
+- **Phase 4 (navigation):** unaffected; Nav2 uses base_link/odom only.
+
+**Operational notes for future calibration runs:**
+- Servo screaming: bus servos saturate at hard stops. Always send a
+  mid-range "safe pose" (e.g. `[90, 120, 30, 60, 90, 90]`) before
+  starting bringup. Documented in calibration/README.md.
+- Joystick mapping found the hard way: `buttons[9]` (left stick
+  click) is the Joy_active+arm_activa toggle in joy_M3Pro, *not*
+  the small Start button. `buttons[10]` is the gripper-mode toggle.
+- The capture script grew preset-cycling commands (`g N`, `n`, `p`,
+  `set j1..j6`, `bump jN +/-D`) so calibration can be performed
+  entirely without the joystick when needed.
+
+**Task list status:** 0.6.2 marked done.
+
+---
+
+### 0.6.3 Store calibration in repo — 2026-05-04 — DONE
+
+**Method:** mirrored all calibration artefacts to canonical
+(`Project0/calibration/` on Mac) + deployed (`~/project0/calibration/`
+on robot) locations, then wired the calibrated transform into the
+project0 launcher.
+
+**Deliverables:**
+
+| File | Purpose |
+|---|---|
+| `calibration/camera_intrinsics_color.yaml` | RGB intrinsics, factory-calibrated (0.6.1) |
+| `calibration/camera_intrinsics_depth.yaml` | Depth intrinsics (registered to color frame) |
+| `calibration/hand_eye_endeffector_to_camera.yaml` | Eye-in-hand transform (0.6.2) |
+| `calibration/handeye_captures.json` | Raw 27 captures, reproducible |
+| `calibration/scripts/*.{py,sh}` | Capture, solve, bringup tooling |
+| `calibration/apriltag36h11_id0_80mm_300dpi.png` | Calibration target, print-ready |
+| `calibration/README.md` | Procedure + decision log + residual analysis |
+| `launch/static_tfs.launch.py` | **Updated** — publishes calibrated `Gripping → camera_optical_calib` static TF |
+
+**Static TF design choice:** the launcher publishes the calibration
+transform under a deliberately *distinct* frame name
+`camera_optical_calib`, not `camera_color_optical_frame`. Reason: the
+orbbec_camera driver already publishes
+`camera_link → camera_color_optical_frame` from its own (factory)
+extrinsics, and TF allows only one parent per frame. Perception code
+in Phase 2 onward should:
+- Either treat `camera_optical_calib` and `camera_color_optical_frame`
+  as the same physical frame (they only differ for TF-topology
+  reasons), looking up cube pose in the driver's frame and the
+  arm-relative transform via the calibrated frame; OR
+- Read `hand_eye_endeffector_to_camera.yaml` directly and apply the
+  4×4 transform in code, composing with the live `base_link → Gripping`
+  TF lookup.
+
+**Smoke test:** `ros2 launch ~/project0/launch/static_tfs.launch.py`
+launches `static_transform_publisher` cleanly. `ros2 run tf2_ros
+tf2_echo Gripping camera_optical_calib` returns the calibrated
+translation and rotation.
+
+**Open items handed to Phase 2:**
+- Set `depth_registration:=true` in the project0 perception bringup
+  (driver default is false but it silently registers anyway; explicit
+  setting guards against SDK-upgrade drift). See 0.6.1 entry.
+- Pass `camera_intrinsics_color.yaml` to any consumers that re-publish
+  CameraInfo.
+- Use `camera_optical_calib` (or read the hand-eye yaml directly) for
+  arm-relative pose math.
+- Hold joint5 ≈ 90° during cube localisation if best calibration
+  accuracy is needed (joint5 at extremes adds ~35 mm bias to the
+  static transform, since the camera is physically on arm4 not
+  arm5/Gripping).
+
+**Task list status:** 0.6.3 marked done. **Phase 0 complete.**
+
+---
+
+## Phase 1: Object Detection
+
+### 1.1 Object specification — 2026-05-04 — DONE
+
+**Method:** user-provided physical inspection of the actual target
+object (replaces assumption of a plain colored cube). Verified live
+with the camera + dt_apriltags.
+
+**Specification:**
+
+| Property | Value |
+|---|---|
+| Shape | cuboid (NOT cube) |
+| Dimensions | 30 × 30 × 60 mm |
+| Color | red on 5 faces |
+| Special face | one 30×30 mm face has an AprilTag |
+| Tag family | tag36h11 |
+| Tag ID | 3 |
+| Tag black-square edge | ~19 mm (corner span 46.2 px @ z=200 mm, fx=479.47) |
+| Lighting | indoor LED overhead, blinds drawn, minimal shadows |
+
+**Implication for design:** the cuboid is a richer detection target
+than a plain colored cube. We get **two complementary detection
+paths** instead of one:
+- **AprilTag track** (when tag face visible): full 6-DOF pose, ~5 mm /
+  1° accuracy at the calibrated tag size.
+- **HSV red track** (always-on fallback): 2D bbox + depth-lift centroid
+  + yaw from `cv2.minAreaRect`. Medium accuracy (~20 mm / 10° in good
+  light).
+
+The cuboid's 1:2 aspect ratio (`asp = max(w,h)/min(w,h) ≈ 1.5–2.0` as
+projected) is also useful for rejecting non-cube clutter (hands, mugs)
+which typically have aspect ratios <1.4.
+
+**Plan changes:** `initial_tasks` Phase 1 was rewritten on 2026-05-04
+to reflect the dual-track architecture. Originally specced as
+"BGR→HSV → contour → bbox" only; now specced as "AprilTag preferred,
+HSV fallback, priority router".
+
+**Task list status:** 1.1 marked done.
+
+---
+
+### 1.2 Detection pipeline — 2026-05-04 — DONE (HSV tuning ongoing as conditions change)
+
+**Method:** built three Python tools under `perception/scripts/`.
+Verified live on hardware; AprilTag track confirmed publishing valid
+Detection3DArray with sensible 3D position; HSV track tuned to reject
+hands while accepting the red cuboid.
+
+**Deliverables:**
+
+| File | Role |
+|---|---|
+| `perception/scripts/cube_detector.py` | ROS 2 node, dual-track detector, publishes `/cube/detections` (`vision_msgs/Detection3DArray`) and `/cube/debug_image` (`sensor_msgs/Image`) |
+| `perception/scripts/hsv_tuner.py` | Interactive trackbar tool, auto-saves to `perception/config/hsv_red.yaml` on every slider change |
+| `perception/config/hsv_red.yaml` | HSV thresholds + morphology + aspect filter, loaded by detector at startup |
+
+**Detector architecture (`cube_detector.py`):**
+- Track A — AprilTag: `dt_apriltags` filter for tag36h11 ID=3.
+  Cuboid centre computed as 15 mm (= half short dim) behind the tag
+  face along tag z-axis. Output `class_id="apriltag_3"`, score =
+  decision_margin / 100, tight covariance (5 mm σ position, 1° σ
+  rotation).
+- Track B — HSV red: dual-band HSV mask (red wraps around 0/180), open
+  + close morphology, contour candidate filter on **area** AND
+  **aspect ratio** (1.4 ≤ asp ≤ 3.5 to reject hands and slim
+  objects), largest survivor wins. Centroid lifted to 3D via 5×5
+  median patch on `/camera/depth/image_raw`. Yaw from
+  `cv2.minAreaRect`. Output `class_id="hsv_red"`, score = clipped
+  contour area, looser covariance (20 mm σ position, 10° σ rotation).
+- Priority router: emit Track A if tag detected this frame, else
+  Track B. Both are computed every frame for /cube/debug_image
+  visualisation.
+
+**HSV thresholds tuned on 2026-05-04 (current operating conditions):**
+- Aspect filter accepts cuboid `asp ≈ 1.55` (not 2.0 because of
+  perspective foreshortening), rejects hands at `asp ≈ 1.3`.
+- Shadow on the cuboid drops V below `v_min` and HSV detection fails
+  → user mitigation: mount a flashlight on the arm (planned, a few
+  days). Tuning fallback (lower v_min/s_min, raise morph_kernel) is
+  documented in `Robot_info/Keep_in_mind`.
+
+**Smoke tests passed:**
+- Bringup + detector publishes `/cube/detections` at camera rate
+  (~29 Hz).
+- AprilTag fires reliably regardless of cube angle (tag face visible).
+- HSV fires when tag is hidden, in good lighting; intermittent under
+  shadow (known issue, see flashlight mitigation).
+- Aspect filter rejects hands cleanly (red `REJ` overlay in debug
+  image).
+
+**Task list status:** 1.2 marked done. Operational HSV tuning will be
+re-done once flashlight is mounted.
+
+---
+
+### 1.3 Robustness shake-down — 2026-05-04 — IN PROGRESS
+
+**Method:** built a robustness logger that subscribes to
+`/cube/detections` and `/camera/color/image_raw`, time-windows the
+data over a fixed interval (default 30 s), and prints summary stats
+(detection rate per track, frame-to-frame position jitter, mean
+score). Appends each run to a CSV for cross-scenario comparison.
+
+**Deliverables:**
+
+| File | Role |
+|---|---|
+| `perception/scripts/robustness_logger.py` | Logger with `--window` and `--label` CLI flags |
+| `perception/logs/robustness.csv` | Cross-scenario CSV (will accumulate as scenarios are run) |
+
+**Test protocol drafted (5 scenarios × 30 s each):**
+1. `plain` — cube static, tag toward camera, normal lighting (tag
+   track baseline)
+2. `plain_hsv` — same setup, tag rotated away (HSV track baseline)
+3. `clutter` — 2–3 reddish/orange objects within 10 cm of the cube
+   (HSV vs clutter test)
+4. `tag_occluded` — finger covers ~30% of the tag (graceful track
+   fall-through test)
+5. `motion` — cube moved/rotated, both faces alternately visible
+   (track-switching + jitter test)
+
+**Targets (per `success_metrics.md` / informal):**
+- Tag-track on `plain`: ≥95% detection rate, <5 mm mean jitter
+- HSV-track on `plain_hsv`: ≥85% detection rate, <15 mm mean jitter
+- HSV-track on `clutter`: jitter spike >50 mm or wrong-object lock
+  triggers a YOLOv8 fallback decision
+- `tag_occluded`: total detection rate ≥80% (split between tracks)
+
+**Status as of session end:** logger built and smoke-tested; all five
+scenarios still need to be run on the robot. User had to step away
+("GTG"). Resume with the protocol above next session.
+
+**Task list status:** 1.3 in progress.
+
+---
+
+## Session bookmark — 2026-05-04 end
+
+**Where we are:** Phase 0 fully closed (calibration usable but
+hardware-capped). Phase 1.1 + 1.2 done. Phase 1.3 protocol drafted +
+logger built; scenarios need to be run on the robot. Phase 1.4
+(message contract documentation) still pending.
+
+**To resume next session:**
+1. Bringup terminals (camera + kin_srv) on the robot.
+2. Start `cube_detector.py`.
+3. Run the 5-scenario robustness protocol (see 1.3 above) with
+   `robustness_logger.py --label <name>`.
+4. Compare against targets. If any scenario fails, decide whether
+   YOLOv8 fallback is needed or just retune HSV.
+5. Then 1.4: lock the `/cube/detections` message contract in
+   `Robot_info/system_architecture.md`.
+
+**Pending real-world step:** flashlight mount on arm (user planned, in
+a few days). Will re-run `plain_hsv` and `clutter` after mount to
+validate the shadow fix.
+
+---
+
+## Phase 1.5: Perception visualization & orientation hardening
+
+### 1.5 Visualization upgrades + 3D-from-depth — 2026-05-15 — DONE
+
+**Entering state:** `cube_detector.py` worked but the `minAreaRect`
+bounding box drawn in `hsv_tuner.py`'s "result" window was visibly
+laggy/unstable, and the published HSV-track orientation assumed the
+cube was lying flat (synthesised a yaw rotation from the 2D angle).
+User reported the *mask itself* was rock-solid; the *box* was the
+problem.
+
+**Diagnosis (minAreaRect jitter):**
+- Orientation flip when cube projects near-square: w/h swap, angle
+  jumps 90°.
+- `cv2.minAreaRect` reports angle in `[-90, 0)` → snaps at the
+  boundary.
+- Fits to the contour boundary only, so a few flickering edge
+  pixels shift the fitted corners.
+
+**Changes applied:**
+
+1. `perception/scripts/hsv_tuner.py`
+   - Replaced the `cv2.boxPoints` rectangle overlay with raw contour
+     outline via `cv2.drawContours(result, [c], -1, ...)` for both
+     kept (green, thick) and rejected (red, thin) survivors.
+   - Added image-moments based orientation visualisation in the
+     "kept" branch: yellow major-axis arrow + faint teal minor-axis
+     line through the centroid, scaled to 2σ extent. Label now reads
+     `axis=Nd` (in image-plane degrees) instead of the old
+     `ang=N` from `minAreaRect`.
+   - Added `import math`.
+   - Final hash on Mac and robot: `0b5ff492a40a9a23c4a292c4cf0f4b20`.
+
+2. `perception/scripts/cube_detector.py`
+   - **`try_hsv` orientation upgrade:** swapped the 2D-yaw + flat
+     rotation matrix for **PCA on the masked depth point cloud**.
+     For every pixel inside the chosen contour, look up depth,
+     project to 3D using camera intrinsics, build a `(N, 3)` point
+     matrix, compute the 3×3 covariance, eigendecompose via
+     `np.linalg.eigh`, order eigenvectors descending. `e1` = long
+     axis, `e2` = short axis on visible face, `e3 = e1 × e2` =
+     face normal (right-handed). Flip `e3` (and `e2` to preserve
+     `det=+1`) so the normal points toward the camera. `R = [e1|e2|e3]`.
+     Centroid is now the mean of valid 3D points (more accurate than
+     the previous 5×5 patch median).
+   - **Hybrid edge-noise filter** (added after user reported jitter):
+     erode the filled contour mask by 4 px before sampling
+     (`cv2.erode(filled, np.ones((9,9), np.uint8))`) to drop the
+     silhouette-edge depth noise the Orbbec is prone to; then reject
+     depth values >20 mm from the median (kills multipath / hole-fill
+     outliers without trimming the face itself).
+   - **3D-axis overlay** in `/cube/debug_image`: added `project_3d`
+     and `draw_pose_axes` helpers. When the HSV track is active,
+     the debug image draws the cyan contour outline plus three
+     arrows through the centroid — **X red (long axis), Y green
+     (short axis on face), Z blue (face normal)** — projected back
+     to image pixels via the intrinsics. `_hsv_viz` instance
+     attribute threads `(contour, R, centroid)` from `try_hsv` to
+     `make_debug_image`.
+   - **`/cube/blue_cloud` PointCloud2 publisher** (added after user
+     pivoted from arrows to a point cloud for the litter-picking
+     goal). Refactored the HSV mask computation into
+     `compute_blue_mask(img)` so it's computed once per frame and
+     shared between `try_hsv` and the cloud publisher. New method
+     `publish_blue_cloud(mask, img_bgr, stamp)` erodes the mask 2 px,
+     looks up depth per pixel, projects to 3D, packs an XYZ+RGB
+     `PointCloud2` (RGB stuffed into a float32 via the standard PCL
+     convention), publishes on `/cube/blue_cloud`. Cloud frame_id =
+     `camera_color_optical_frame` (inherits from `self.frame_id`).
+   - Final hash on Mac and robot: `52a0d2e46789e4ba6a420856954b909d`.
+
+**Transfer discipline lesson learned:** the user spent several
+iterations confused that the robot wasn't showing new behaviour
+because an earlier `scp` had never actually run (or ran against a
+different host). Verified end-state with paired md5 hashes from Mac
+and robot — these now match. Going forward, every code transfer
+ends with a hash-pair check before declaring success.
+
+**Bright-light HSV note:** user reported the mask missing the
+brightest blue regions under intense light. Initial suggestion to
+lower `s_min` did not help. User found that **reducing the morph
+kernel** in `hsv_blue.yaml` produced markedly better detection —
+the dilation/closing was merging the bright patch with adjacent
+non-blue and then erosion was wiping it out. Worth recording: under
+high-glare conditions on this Orbbec, kernel size dominates `s_min`
+as the primary tuning knob. Earlier specular-saturation theory was
+not the actual bottleneck.
+
+**RViz setup outcome:**
+- Cloud published in `camera_color_optical_frame`. Robot's TF tree
+  contains the internal camera frames (`camera_link → camera_depth_frame
+  → camera_color_frame → camera_color_optical_frame`) but no
+  `base_link` / `map` (static_tfs.launch not running this session).
+  Setting **Fixed Frame = camera_color_optical_frame** resolves the
+  "error in fixed frame" + "message filter dropping because queue
+  is full" errors.
+- IR feed available at `/camera/ir/image_raw`. Best displayed via
+  RViz **Camera** display (uses `/camera/ir/camera_info` for
+  intrinsics; renders the IR image as the 3D view background with
+  the point cloud overlaid on top).
+- For full-scene context the Orbbec already publishes
+  `/camera/depth_registered/points` — add as a second PointCloud2
+  display to see the cube in its surroundings.
+
+**User-side observation:** the published `/cube/blue_cloud` looks
+like a jittering 2.5D blob, not a cuboid. This is correct and
+fundamental — a single depth camera measures distance to the
+nearest visible surface per pixel, so only the *front face* of the
+cube is sampled. The other five faces are invisible to this sensor.
+A true cube-shaped cloud would require either multi-view scanning
+(move the camera around the cube and accumulate frames) or
+mesh-based pose alignment.
+
+**RViz display tweaks recommended to user:**
+- Style → Flat Squares, Size → 0.005 m (closes the gaps).
+- Decay Time → 0.3 s (accumulates ~10 frames, smooths jitter).
+- Color Transformer → AxisColor, Axis → Z (makes the planar face
+  visually obvious).
+
+**Status as of session end:**
+- `hsv_tuner.py` ships a stable contour + moment-axis visualisation;
+  no more `minAreaRect` artefacts.
+- `cube_detector.py` publishes:
+  - `/cube/detections` — pose now uses PCA-derived `R` for the HSV
+    track instead of synthesised yaw.
+  - `/cube/debug_image` — contour outline + 3D-axis overlay.
+  - `/cube/blue_cloud` — XYZ+RGB point cloud of every blue pixel
+    with valid depth, ready for RViz / downstream clustering.
+- Robustness protocol from Phase 1.3 still **not run** against the
+  upgraded detector. The new `R` should reduce orientation jitter
+  in the logger output, but this is unverified.
+
+**Open design decisions:**
+1. **Approach A (PCA) vs Approach B (RANSAC plane fit).** Currently
+   on A with the hybrid filter. If face-on / end-on views show
+   `e1`/`e2` axis swaps (eigenvalue degeneracy), switch to B:
+   plane-fit gives the normal from a RANSAC vote; in-plane angle
+   comes from 2D mask moments. Decoupled estimators, ~30 more LOC.
+   Recorded but not implemented.
+2. **Clustering on the blue cloud.** For litter-picking
+   generalisation, the next natural step is Euclidean clustering
+   of `/cube/blue_cloud` to separate distinct blue objects, then
+   oriented-bounding-box per cluster as grasp targets. Not yet
+   implemented.
+3. **Multi-view accumulation.** Would convert the 2.5D blob into
+   a proper 3D point cloud of the cube but requires camera motion
+   and a registration pipeline. Out of scope for this session.
+
+**Task list status:** 1.5 closed. 1.3 (robustness logging) still
+in progress from earlier session — protocol drafted, scenarios not
+yet run against this upgraded detector.
+
+---
+
+## Session bookmark — 2026-05-15 end
+
+**Where we are:** Visualisation and orientation pipeline materially
+improved. The HSV track now publishes a depth-aware 3D rotation
+(PCA-derived) instead of the old flat-cube yaw. A coloured
+PointCloud2 of all blue-masked pixels is on `/cube/blue_cloud` for
+RViz. The bounding box artefacts are gone from the tuner; the
+detector debug view shows X/Y/Z axes correctly projected through
+the centroid.
+
+**To resume next session:**
+1. Run the Phase 1.3 robustness protocol against the upgraded
+   `cube_detector.py` with `robustness_logger.py --label <name>`
+   for the five scenarios (plain, plain_hsv, clutter, tag_occluded,
+   motion). Compare jitter / detection-rate against the targets.
+2. If face-on / end-on scenarios show PCA axis-swap behaviour,
+   implement Approach B (RANSAC plane fit + 2D moment angle).
+3. Decide whether to add Euclidean clustering on
+   `/cube/blue_cloud` for litter-picking generalisation.
+4. Phase 1.4: lock the `/cube/detections` message contract in
+   `Robot_info/system_architecture.md` — covariance values now
+   reflect the tighter PCA estimate (`pos_sigma=0.015 m`,
+   `rot_sigma=5°`) rather than the old loose HSV values.
+5. Flashlight-mount evaluation when the hardware arrives.
+
+**Pending real-world step:** flashlight mount on arm still
+pending. Note: morph-kernel size matters more than `s_min` for
+bright-light HSV on this Orbbec; record this when retuning after
+the mount lands.
+
+---
+
+## Session 2026-05-16 — Cube-detection glare debugging & v1 testbed
+
+**Theme:** All work this session is auxiliary to Phase 1 cube-detection
+reliability. No formal phase opened/closed. Goal was to debug a
+persistent failure mode where bright patches on the matte blue cube
+read as white and escape the HSV mask, even after the previous
+adaptive-HSV-around-blue-seeds work that improved capture definition.
+
+### Files touched
+
+| File | Change |
+| --- | --- |
+| `perception/scripts/hsv_tuner.py` | Added `/camera/depth/image_raw` + `/camera/ir/image_raw` subscriptions and two extra windows (`depth` colour-mapped via `COLORMAP_TURBO`, `ir` normalised to 8-bit). Windows open only once a frame arrives so the tuner still launches if those streams are silent. |
+| `perception/scripts/cube_detector_v1.py` | **Rewrote** (was a snapshot of the full Tier-1 detector). Now a stripped-down tuner-less sibling of `hsv_tuner.py`: loads HSV from `hsv_blue.yaml`, runs the same mask + contour + aspect filter + moment-axis viz, but with no trackbars / no auto-save. Then layered specular-recovery on top — see below. |
+| Memory: `feedback_explicit_scp.md` | User confirmed scp to robot must remain an explicit step, never automatic after edits. |
+| Memory: `project_blue_cube_glare_fix.md` | Orange-tinted light or orange filter beats matte-cube glare via complementary-colour filtering. |
+
+### Glare investigation — chain of reasoning
+
+1. Reviewed three candidate fixes: **(a)** specular-aware mask
+   augmentation (high-V/low-S pixels adjacent to confident blue),
+   **(b)** circular polarizer on the lens, **(c)** lighting
+   diffusion. Recommended (a) as software fix and (b) as hardware fix.
+2. **Polarizer test — failed.** User tried every pair of polarized
+   sunglasses in the house at multiple rotations; no rotation reduced
+   the glare. Flagged that this likely means the problem is **not**
+   classical specular reflection (which polarizes off non-metallic
+   surfaces) but either **(i)** diffuse scatter off a matte surface,
+   or **(ii)** sensor saturation from overall illumination.
+3. **User confirmed: diffuse off matte.** Polarizer is fundamentally
+   the wrong tool. Proceeded with software fix.
+4. **Implemented specular-recovery pipeline** in `cube_detector_v1.py`
+   as the active testbed:
+   - **Stage 1 — blue HSV mask** (unchanged from tuner).
+   - **Stage 2 — specular candidates:** `inRange` for `V ≥ 220, S ≤ 60`
+     (`SPEC_V_MIN`, `SPEC_S_MAX` at top of file).
+   - **Stage 3 — adjacency filter:** dilate blue mask by
+     `NEAR_BLUE_DILATE_PX = 21`; AND with specular candidates so only
+     "near-blue glare" gets pulled in, not random whites elsewhere.
+   - **Stage 4 — convex-hull fill:** for every contour above
+     `min_area` in the augmented mask, fill `cv2.convexHull(c)` —
+     catches glare patches sitting inside the blue rim that weren't
+     adjacent enough for stage 3.
+   - **New `mask_aug` window** shows recovery side-by-side with the
+     raw HSV mask so the user can see if the recovery is over-reaching.
+5. **User finding (the real win): orange light / orange filter.**
+   User switched room lighting to an orange-ish source → cube
+   detected nearly flawlessly. Repeated with white light + orange
+   tinted glasses → still works even at medium glare. Fails only
+   when the light source is within ~5 cm of the cube (sensor
+   saturation in all channels).
+
+**Why orange works (complementary-colour filtering):**
+white glare = R, G, B all clipping to 255 → HSV reads "low-S high-V"
+≡ "looks white". Orange filter / orange light cuts the **blue**
+wavelengths of incoming light, so glare patches drop their B channel
+and become saturated *orange* — no longer in either the blue band or
+the "near-white" band. The cube's blue surface still reflects enough
+blue (dominant relative to its R/G) for hue to survive; auto-exposure
+compensates for the overall dimming. Same physics as red filters
+darkening sky in B&W photography.
+
+### Deliverables on robot
+
+Both files synced to `jetson@192.168.50.103:/home/jetson/project0/perception/scripts/`
+with MD5 verification:
+
+- `hsv_tuner.py` — 5-window tuner (live / mask / result / depth / ir)
+- `cube_detector_v1.py` — headless v1 testbed with specular recovery
+
+### Open items / next session
+
+1. **Validate orange-filter setup hardware-side.** User intends to
+   buy a proper polarizing filter next week; given today's finding,
+   that purchase should be **replaced or supplemented** by a deep
+   orange photo filter (Wratten #21 or #22) — far stronger than
+   sunglasses and mountable in front of the lens reproducibly.
+   Stacking an ND filter would also address the 5 cm failure mode.
+2. **If the optical fix holds, simplify the software pipeline.**
+   `FILL_CONVEX_HULL = False` + remove the specular-candidate union
+   in `cube_detector_v1.py`. Cleaner detector, fewer knobs to drift.
+3. **Lower camera exposure** as a no-hardware alternative to ND
+   stacking for the close-light failure. Worth a quick test before
+   buying more glass.
+4. **Carry specular-recovery upstream** if needed: currently lives
+   only in `cube_detector_v1.py`. The production `cube_detector.py`
+   still calls `blue_mask.compute_blue_mask` from `blue_mask.py`,
+   which has not been touched. Only port the change once validated.
+5. **Phase 1.3 robustness protocol still not run** against the
+   upgraded production detector. Carried from previous session.
+
+**Task list status:** No formal task opened/closed. Cube-detection
+reliability work continues to feed Phase 1.5 hardening. Phase 1.3
+robustness still pending from the 2026-05-15 bookmark.
+
+---

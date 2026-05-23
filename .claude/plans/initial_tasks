@@ -1,0 +1,215 @@
+# Initial Task List — Cube Pick-and-Place
+
+## Phase 0: Foundations (do these first)
+
+### 0.1 Hardware & assumptions
+- [x] Confirm robot platform (Jetson Orin NX 8GB, M3PRO, JetPack 6.x, ROS 2 Humble)
+- [~] Confirm arm DOF (6) and reachable workspace — reach/payload/gripper width still [unverified]
+- [x] Confirm camera: Orbbec DaBai DCW2 RGB-D (no RealSense attached)
+- [~] Confirm LiDAR presence and model — no driver package found; needs physical inspection
+- [x] Document assumptions in HARDWARE.md (project root)
+
+### 0.2 Coordinate frames & TF
+- [x] Define TF tree (see `../Robot_info/tf_tree_spec.md`) — `arm_base` dropped (orphan in URDF); `end_effector` = URDF link `Gripping`
+- [x] Verify URDF matches physical robot — structurally valid; eye-in-hand Orbbec confirmed; `Camera` link stale but kept (SRDF dependency); `arm4_Joiint` typo left as-is (SRDF dependency)
+- [x] Publish static transforms for camera mount — `DCW2 → camera_link` identity placeholder via `~/project0/launch/static_tfs.launch.py` on robot (smoke-tested)
+
+### 0.3 Success metrics
+- [x] Define per-step metrics (see `../Robot_info/success_metrics.md` — per-phase tables for detection, position, mapping, nav, pickup, placement, verification)
+- [x] Define overall success: ≥90% over 10 trials, with graded tiers S/A/B/F
+- [x] Define timeout budgets for each phase (total end-to-end budget: ≤150 s/cycle)
+
+### 0.4 System architecture
+- [x] List ROS2 nodes (see `../Robot_info/system_architecture.md` — 7 new project0 nodes + reused Yahboom/Nav2 stack)
+- [x] Define message contracts (standard `vision_msgs`/`geometry_msgs`/Nav2 actions; zero new msgs, two deferred actions)
+- [x] Choose orchestration framework — **BehaviorTree.CPP v4** (Nav2 uses it, visual debug via Groot2)
+- [x] Sketch global state machine with failure transitions (BOOT → OBSERVE → NAV_TO_CUBE → PICKUP → NAV_TO_BIN → PLACE → VERIFY → IDLE, with per-phase fallback policy + shared RECOVER subtree)
+
+### 0.5 Simulation setup — DONE 2026-04-15 (see `sim completed`)
+- [x] Bring up robot in Gazebo with arm, camera, cube, bin (Ignition Fortress + `ros_gz` + `gz_ros2_control`; `tabletop.sdf` has red cube + blue drop bin)
+- [x] Verify TF, camera feed, arm control all work in sim (S.7 verification gate: TF matches spec, RGB ~19 Hz / depth ~18 Hz, arm + gripper trajectories SUCCEEDED, kinematic base via `VelocityControl`)
+- [x] Commit sim world file (`m3pro_gazebo` package committed locally on Mac, commit `9fcf914`; Jetson synced)
+
+### 0.6 Calibration
+- [x] Camera intrinsics calibration — Orbbec DCW2 factory intrinsics adopted; see `Initial_tasks_resuts_summary` 0.6.1 — 2026-05-03
+- [x] Hand-eye calibration (camera → arm) — 27 captures, PARK method, residuals 13.7°/82mm (limited by open-loop M3PRO joints + 5DOF + URDF tolerances); see `Initial_tasks_resuts_summary` 0.6.2 — 2026-05-04
+- [x] Store calibration files in repo — yamls + raw captures + AprilTag image in `calibration/`, calibrated static TF wired into `launch/static_tfs.launch.py` as `Gripping → camera_optical_calib` — 2026-05-04
+
+---
+
+## Phase 1: Object Detection (cuboid + tag, dual-track)
+
+Object: cuboid 30×30×60 mm, red on 5 faces, AprilTag tag36h11 ID=3
+(black-square edge ~19 mm) on one 30×30 mm face. Confirmed on hardware
+2026-05-04 with dt_apriltags probe at z=200 mm (decision margin 63.1).
+
+### 1.1 Cube specification — DONE 2026-05-04
+- [x] Shape, dimensions, color, tag family/ID/size all confirmed.
+- [x] Lighting: indoor LED overhead, blinds drawn, minimal shadows.
+
+### 1.2 Detection pipeline (dual-track)
+- [ ] **Track A — AprilTag (preferred when tag face visible)**: dt_apriltags
+      detector for tag36h11 ID=3 on `/camera/color/image_raw` → full 6-DOF
+      pose. Confidence high.
+- [ ] **Track B — HSV red segmentation (always-on fallback)**:
+  - [ ] BGR → HSV conversion
+  - [ ] HSV threshold tuning via interactive trackbar tool (`hsv_tuner.py`)
+  - [ ] Morphological open/close
+  - [ ] Contour extraction + area + aspect-ratio filter (cuboid is 1:2)
+  - [ ] Centroid depth-lift via `/camera/depth/image_raw` + intrinsics
+  - [ ] Yaw inferred from contour orientation (`cv2.minAreaRect`)
+  - [ ] Confidence medium
+- [ ] **Priority router**: emit Track A's result if tag detected this frame,
+      else emit Track B's result. Track-source recorded in output.
+
+### 1.3 Robustness
+- [ ] Test under varied lighting (LED on/off mix, partial blind open)
+- [ ] Test with background clutter
+- [ ] Test with partial occlusion (tag occluded → must fall to HSV; cube
+      partially occluded → must still detect)
+- [ ] Decide fallback: YOLOv8 if HSV unreliable in cluttered scenes
+
+### 1.4 Detection interface
+- [ ] Publish `vision_msgs/Detection3DArray` on `/cube/detections` with:
+  - `bbox` (BoundingBox3D)
+  - `results[0].hypothesis.class_id` ∈ {`apriltag_3`, `hsv_red`} (track source)
+  - `results[0].hypothesis.score` (decision_margin/area-confidence proxy)
+  - `results[0].pose.pose` in `camera_color_optical_frame`, with covariance
+    encoding the per-track confidence (tag: tight; HSV: loose)
+- [ ] Lock message contract; document in `Robot_info/system_architecture.md`
+
+---
+
+## Phase 2: Position Estimation
+
+### 2.1 2D → 3D lift
+- [ ] Subscribe to `/camera_info` for intrinsics
+- [ ] Sample depth at cube centroid
+- [ ] Compute camera-frame 3D point
+
+### 2.2 Frame transform
+- [ ] TF2 transform camera_frame → base_link
+- [ ] Publish cube pose as `geometry_msgs/PoseStamped`
+
+### 2.3 Pose refinement
+- [ ] Extract cube top-face points from depth
+- [ ] PCA or plane fit for yaw orientation
+
+### 2.4 Filtering
+- [ ] Temporal averaging or Kalman filter on pose
+- [ ] Reject outliers
+
+---
+
+## Phase 3: Environment Mapping
+
+### 3.1 Offline map build
+- [ ] Teleop drive the environment
+- [ ] Run slam_toolbox / Cartographer
+- [ ] Save map to disk
+
+### 3.2 Bin localization
+- [ ] Attach AprilTag to bin
+- [ ] Detect tag, store bin pose in map frame
+- [ ] Persist bin pose to config
+
+### 3.3 Runtime localization
+- [ ] Launch AMCL against saved map
+- [ ] Verify localization accuracy
+
+---
+
+## Phase 4: Navigation to Cube
+
+### 4.1 Approach pose computation
+- [ ] Compute standoff pose ~20–30 cm from cube within arm workspace
+- [ ] Verify pose is collision-free
+
+### 4.2 Global planning
+- [ ] Nav2 plan to approach pose
+- [ ] Verify local costmap + recovery behaviors
+
+### 4.3 Visual servoing handoff
+- [ ] Switch from Nav2 to vision-in-loop alignment for final few cm
+- [ ] Tune alignment tolerance
+
+---
+
+## Phase 5: Object Pickup
+
+### 5.1 Grasp pose computation
+- [ ] end_effector target = cube_center + vertical offset
+- [ ] Align yaw from pose estimation
+
+### 5.2 Reachability check
+- [ ] MoveIt2 IK solve before commit
+- [ ] On failure: loop back to re-plan base pose
+
+### 5.3 Pre-grasp
+- [ ] Move to hover pose 5–10 cm above cube, gripper open
+
+### 5.4 Approach
+- [ ] MoveIt2 Cartesian descent
+
+### 5.5 Close gripper
+- [ ] Close to target width (not fully closed)
+
+### 5.6 Grasp confirmation
+- [ ] Check gripper effort/current feedback
+- [ ] Check gripper final width vs expected cube width
+- [ ] Vision re-check: cube no longer on ground
+- [ ] On failure: retry or abort
+
+### 5.7 Retreat
+- [ ] Cartesian lift to safe transport height
+- [ ] Tuck arm into transport pose
+
+---
+
+## Phase 6: Navigation to Bin
+
+### 6.1 Transport
+- [ ] Arm in tucked, stable pose
+- [ ] Nav2 plan to bin approach pose
+
+### 6.2 Grasp monitoring during transit
+- [ ] Continuous effort monitoring node
+- [ ] Optional vision monitoring
+- [ ] On lost cube: abort to search state
+
+---
+
+## Phase 7: Placement
+
+### 7.1 Bin approach
+- [ ] Load bin pose from config
+- [ ] Compute approach pose over bin interior (not rim)
+
+### 7.2 Release
+- [ ] Descend to release height
+- [ ] Open gripper
+- [ ] Retreat to safe pose
+
+---
+
+## Phase 8: Verification
+
+### 8.1 Perception check
+- [ ] Confirm cube absent from gripper
+- [ ] Confirm cube present inside bin bbox
+
+### 8.2 Reporting
+- [ ] Log success/failure with timestamp
+- [ ] Save debug images per trial
+
+---
+
+## Integration Milestones (run in order)
+
+- [ ] M1: Detect cube, print 3D pose (stationary)
+- [ ] M2: Arm reaches toward printed pose (no gripping)
+- [ ] M3: Full pickup, stationary base
+- [ ] M4: Add navigation to cube
+- [ ] M5: Add placement in bin
+- [ ] M6: Add failure recovery + end-to-end trials
+- [ ] M7: Transfer from sim to hardware

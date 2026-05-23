@@ -1,0 +1,1005 @@
+# Sim Plans — Gazebo on the M3PRO Jetson
+
+Execution plan to get a working Gazebo simulation of the ROSMASTER
+M3PRO running on the Jetson Orin NX, matching the real robot's ROS 2
+topic interface so Project0 code runs unchanged in sim or on hardware.
+
+Scope: **only what is needed to make sim functional.** Polish,
+reusable-world library, regression fixtures, and Project0 integration
+are out of scope for this file.
+
+Target stack: **Ignition Gazebo Fortress (Gazebo 6)** + `ros_gz` bridge
++ `gz_ros2_control`. This is what the current Humble apt repo ships.
+Gazebo Classic is **not** used — the Humble repo has dropped its
+Classic bindings (no `ros-humble-gazebo-ros-pkgs`), and new Gazebo is
+also where Jazzy/Rolling are headed, so this is the long-term path.
+
+Terminology note: Fortress is the last release using the `ignition::`
+C++ namespace and `ign gazebo` binary name; from Harmonic onwards it
+becomes `gz::` and `gz sim`. This plan uses the Fortress names
+(`ignition::gazebo::systems::*`, `ign gazebo`) because that's what
+the binaries on the Jetson expect. ROS-side packages use the newer
+`ros-humble-ros-gz-*` / `ros-humble-gz-ros2-control` names.
+
+Package location: **`~/Documents/Projects/m3pro_gazebo/`** on the Mac,
+cloned/synced to **`~/m3pro_gazebo_ws/src/m3pro_gazebo/`** on the
+Jetson for build + run.
+
+---
+
+## S.1 Install Gazebo and dev dependencies on Jetson — DONE 2026-04-08
+
+- [x] `sudo apt install ros-humble-ros-gz ros-humble-gz-ros2-control ros-humble-ros2-control ros-humble-ros2-controllers`
+- [x] `ign gazebo --version` → **Gazebo Sim 6.16.0** (Ignition Fortress)
+- [x] `ros2 pkg list | grep ros_gz` → `ros_gz`, `ros_gz_bringup`? no: `ros_gz`, `ros_gz_bridge`, `ros_gz_image`, `ros_gz_interfaces`, `ros_gz_sim`, `ros_gz_sim_demos`, `gz_ros2_control`
+- [x] Raw Gazebo GUI smoke test: `ign gazebo -v 4 empty.sdf` opens the Fortress GUI ✅
+- [x] ROS 2-launched Gazebo smoke test: `ros2 launch ros_gz_sim gz_sim.launch.py 'gz_args:=empty.sdf -r'` opens the GUI under launch ✅
+
+### S.1 lessons learned (for future reference)
+
+- **Launch argument quoting:** `gz_args:="empty.sdf -r"` gets mangled by
+  bash/zsh. Always use single quotes around the whole token:
+  `'gz_args:=empty.sdf -r'`. Without the `-r`, Gazebo starts paused and
+  you have to press play manually.
+- **libEGL / nvidia-drm warnings are benign on this Jetson.** `ros2
+  launch` inherits environment variables that cause Mesa to try
+  loading an NVIDIA DRI driver from a path that doesn't exist; Mesa
+  warns, then falls back to a working renderer. The GUI still opens.
+  Do not spend time "fixing" this unless the GUI actually fails to
+  open on a future run.
+- **Yahboom `yahboom_M3Pro_*` and `M3Pro_*` package name warnings are
+  cosmetic.** Those packages use CamelCase which violates ROS 2
+  naming rules, so every `ros2 launch` scan prints warnings. Ignore.
+
+## S.2 Create the `m3pro_gazebo` ROS 2 package — DONE 2026-04-08
+
+- [x] Workspace: `~/m3pro_gazebo_ws/` on the Jetson; package at `src/m3pro_gazebo/`
+- [x] Package skeleton via `ros2 pkg create --build-type ament_cmake m3pro_gazebo ...` with runtime deps
+- [x] Subdirs present: `urdf/`, `worlds/`, `launch/`, `config/`, `meshes/` (auto-generated `src/` and `include/` removed — package is data-only)
+- [x] 20 STL meshes copied from `yahboomcar_ws/src/yahboom_M3Pro_description/meshes/` into `m3pro_gazebo/meshes/`
+- [x] `CMakeLists.txt` rewritten as data-only: `install(DIRECTORY urdf worlds launch config meshes DESTINATION share/${PROJECT_NAME})`
+- [x] `package.xml` cleaned up: Apache-2.0 license, proper description, runtime (`exec_depend`) dependencies for `ros_gz_sim`, `ros_gz_bridge`, `ros_gz_image`, `gz_ros2_control`, `xacro`, `robot_state_publisher`, `joint_state_broadcaster`, `joint_trajectory_controller`
+- [x] `colcon build --packages-select m3pro_gazebo` succeeds (1.45 s); install layout contains all five data directories plus 20 meshes; `ros2 pkg prefix m3pro_gazebo` resolves
+
+## S.3 Convert URDF to xacro with sim/real toggle — DONE 2026-04-08
+
+- [x] Copy `yahboom_M3Pro_description/urdf/M3Pro.urdf` → `m3pro_gazebo/urdf/m3pro.xacro`
+- [x] Normalize CRLF → LF (SolidWorks exporter ships with CRLF)
+- [x] Rewrite `package://yahboom_M3Pro_description/meshes/` → `package://m3pro_gazebo/meshes/` (38 occurrences)
+- [x] Add `xmlns:xacro="http://www.ros.org/wiki/xacro"` to the `<robot>` root
+- [x] Add `<xacro:arg name="use_sim" default="true"/>` and bind to a `<xacro:property>` of the same name for use in S.4 conditionals
+- [x] **`arm4_Joiint` typo preserved** (confirmed via `grep -c` = 1)
+- [x] **All `<inertial>`, `<visual>`, and `<collision>` blocks already present in source URDF** — Yahboom's SolidWorks export is fully physics-ready. Inertia matrices verified positive-definite for all 20 links. Zero scaffolding work needed here.
+- [x] `xacro` expansion succeeds for both `use_sim:=true` and `use_sim:=false`; `check_urdf` accepts both outputs; tree structure matches real robot (via `tf_tree_spec.md`)
+- [x] `colcon build` installs `urdf/m3pro.xacro` under the package share
+
+## S.4 Add Gazebo plugins (the load-bearing part) — DONE 2026-04-08
+
+Entire Gazebo block is wrapped in `<xacro:if value="${use_sim}">` so
+toggling the xacro arg cleanly produces either the sim or real URDF.
+
+### S.4.1 ros2_control for the arm
+
+- [x] `<ros2_control name="m3pro_sim" type="system">` block listing `arm1_Joint`, `arm2_Joint`, `arm3_Joint`, `arm4_Joiint` (typo preserved), `arm5_Joint`, `rlink1_Joint`, `llink1_Joint` (mimic)
+- [x] All driven joints declare `position` command + `position`+`velocity` state interfaces
+- [x] `<hardware>` loads `ign_ros2_control/IgnitionSystem`
+- [x] Separate `<gazebo>` block loads `libign_ros2_control-system.so` plugin with `$(find m3pro_gazebo)/config/arm_controllers.yaml`
+- [x] `config/arm_controllers.yaml` created: `joint_state_broadcaster` + `arm_controller` (JointTrajectoryController for 5 arm joints) + `gripper_controller` (JointTrajectoryController for `rlink1_Joint`), 100 Hz update rate
+- [x] Mimic config expressed at the ros2_control level (no URDF `<mimic>` tag surgery): `llink1_Joint` has `<param name="mimic">rlink1_Joint</param>` with `<param name="multiplier">-1</param>`
+
+### S.4.2 Camera sensor (Orbbec DaBai DCW2 parity)
+
+- [x] `<sensor type="rgbd_camera">` attached to URDF link `DCW2` (eye-in-hand)
+- [x] 640×480 @ 30 Hz, hFOV 60° (1.0472 rad), near 0.1 m, far 8.0 m
+- [x] `<topic>camera</topic>` inside Gazebo; bridged to real Orbbec topic names in `config/ros_gz_bridge.yaml`:
+  - gz `/camera/image` → ros `/camera/color/image_raw`
+  - gz `/camera/depth_image` → ros `/camera/depth/image_raw`
+  - gz `/camera/camera_info` → ros `/camera/color/camera_info`
+- [x] `<gz_frame_id>DCW2</gz_frame_id>` so the sensor frame aligns with the URDF link (optical-frame rotation handled by sensor plugin defaults + later static TF if needed)
+- [x] Sensors system plugin is world-scoped and will be added in S.5's `empty.sdf`/`tabletop.sdf`
+
+### S.4.3 Drive plugin — REVISED during S.7
+
+DiffDrive was abandoned during S.7 debugging due to Fortress's
+inability to generate wheel-ground traction for URDF-spawned models.
+
+Final approach:
+- [x] `ignition::gazebo::systems::VelocityControl` subscribes to GZ `/cmd_vel`, moves model kinematically
+- [x] `ignition::gazebo::systems::OdometryPublisher` publishes GZ `/odom` + `/tf` (`odom→base_link`)
+- [x] ROS `/cmd_vel` → `ros_gz_bridge` → GZ `/cmd_vel` → VelocityControl
+- [x] GZ `/odom` → bridge → ROS `/odom`
+- [x] **No wheel physics** — robot slides, doesn't roll. Documented limitation.
+
+### Extras added in S.4 (not explicitly checklisted, but needed)
+
+- [x] `JointStatePublisher` system plugin in a separate `<gazebo>` block so wheel joint states show up in `/joint_states`
+- [x] Gazebo material colour tags for base, arm, wheels, gripper, camera (cosmetic)
+- [x] `/clock` bridge so `use_sim_time` works end-to-end
+
+### Verification
+
+- [x] `colcon build --packages-select m3pro_gazebo` succeeds
+- [x] `xacro m3pro.xacro use_sim:=true` → 734 lines, `check_urdf` accepts
+- [x] `xacro m3pro.xacro use_sim:=false` → 580 lines (Gazebo block stripped), `check_urdf` accepts
+- [x] Sim URDF grep sanity: `ign_ros2_control`×2, `DiffDrive`×2, `rgbd_camera`×1, `mimic`×8 (includes comments), `arm4_Joiint`×3
+- [x] Real URDF grep sanity: `arm4_Joiint`×1 (original definition only, no sim pollution)
+
+## S.5 Worlds and spawn — DONE 2026-04-08
+
+- [x] `worlds/empty.sdf` — SDFormat world with sun + ground plane + all five mandatory Fortress system plugins (`Physics`, `SceneBroadcaster`, `UserCommands`, `Sensors` with ogre2 render engine, `Contact`). Schema-validated with `ign sdf -k` → **Valid**.
+- [x] `worlds/tabletop.sdf` — extends empty with a red cube (4 cm, 20 g, 25 cm in front of origin) and a blue open-top bin (15×15×10 cm, 5 walls + floor, static, 40 cm to the +Y side). No actual tabletop — the cube and bin sit on the ground plane. Schema-validated → **Valid**.
+- [x] `launch/spawn_robot.launch.py` — pipeline: `xacro` → `robot_state_publisher` publishes `/robot_description` with `use_sim_time: true` → `ros_gz_sim create -topic /robot_description` spawns. Takes `use_sim`, `entity_name`, `x`, `y`, `z` launch args. Does NOT start Gazebo itself (that's S.6).
+
+## S.6 Top-level bringup launch — DONE 2026-04-08
+
+- [x] `launch/sim.launch.py` orchestrates, in order:
+  1. `SetEnvironmentVariable` to prepend the package's parent dir to `IGN_GAZEBO_RESOURCE_PATH` so Fortress can resolve `package://m3pro_gazebo/meshes/*`
+  2. `ros_gz_sim/launch/gz_sim.launch.py` included with `gz_args:=<world path> -r -v 3`
+  3. `ros_gz_bridge/parameter_bridge` with the `config_file` pointing at `config/ros_gz_bridge.yaml`
+  4. `spawn_robot.launch.py` included (xacro → RSP → `ros_gz_sim create`)
+  5. `controller_manager/spawner joint_state_broadcaster`
+  6. On jsb exit → `spawner arm_controller` (via `RegisterEventHandler(OnProcessExit)`)
+  7. On arm exit → `spawner gripper_controller` (same pattern)
+  8. `rviz2` gated on `IfCondition(rviz)`
+- [x] Launch args:
+  - `world` — defaults to `tabletop.sdf`; `empty.sdf` is the alternative (`world:=empty.sdf`)
+  - `use_sim` — defaults to `true`, threaded through to the spawn launch
+  - `rviz` — defaults to `true`
+  - `entity_name` — defaults to `m3pro`
+- [x] `ros2 launch --print` expands the entire action graph with no substitution errors
+
+## S.7 Verification checklist (the gate to calling sim "done") — DONE 2026-04-14
+
+Extensive debugging session. 13 bugs found and fixed (see
+`sim_plans_results_summary` S.7 for the full chain). Major
+architectural changes during S.7:
+- DiffDrive plugin abandoned → `VelocityControl` (kinematic base)
+- `OdometryPublisher` added for `/odom`
+- Wheel joints removed from ros2_control (not driven by IgnitionSystem)
+- Wheel collisions: mesh → cylinder → sphere
+- Base collision: mesh → raised box
+- Physics engine: DART → Bullet
+- FASTRTPS unset automated in launch file
+- Joint damping added to all joints
+
+Final verification results (all on `ROS_DOMAIN_ID=0`, isolated from
+real robot on domain 30):
+
+- [x] TF tree matches `tf_tree_spec.md`: `odom → base_link → arm1..arm5 → Gripping`, `arm4 → DCW2`
+- [x] `/joint_states` publishing (arm + gripper, NOT wheels)
+- [x] `/camera/color/image_raw` ~19 Hz
+- [x] `/camera/depth/image_raw` ~18 Hz
+- [x] `/camera/color/camera_info` 640×480, frame `DCW2`
+- [x] `/cmd_vel` forward → robot translates (VelocityControl)
+- [x] `/cmd_vel` angular → robot rotates
+- [x] `/odom` ~37 Hz (OdometryPublisher)
+- [x] GZ topics (`ign topic -l`) match expected set
+- [x] `arm_controller/follow_joint_trajectory` action SUCCEEDED
+- [x] `gripper_controller/follow_joint_trajectory` action SUCCEEDED
+- [x] No real robot motion during sim (domain isolation confirmed)
+
+## S.8 Documentation + commit — DONE 2026-04-15
+
+- [x] `README.md` in `m3pro_gazebo/` covering: purpose, prerequisites, build, safety note on `ROS_DOMAIN_ID`, launch args, topic contract, known limitations (kinematic base, mecanum not simulated, servo effort not modelled, grasp physics unreliable, Orbbec depth noise mismatch, `arm4_Joiint` typo preserved, RViz+Gazebo OOM on Jetson 8 GB), and layout
+- [x] rsync Jetson → Mac at `~/Documents/Projects/m3pro_gazebo/` (authoritative copy for git)
+- [x] `.gitignore` for `build/`, `install/`, `log/`, `__pycache__`, `.DS_Store`
+- [x] `git init -b main` + initial commit on the Mac (no remote configured — push deferred until user picks one)
+- [x] Sync new files (`README.md`, `.gitignore`) back to Jetson
+
+---
+
+## Known limitations to document up-front (non-goals)
+
+- Mecanum strafe is approximated by diff-drive; sideways motion won't work in sim.
+- Servo effort/current in sim does not match real servos; grasp confirmation via effort cannot be validated in sim. Must be validated on hardware.
+- Grasp physics for parallel grippers on small objects is unreliable in Gazebo Classic. Sim is for logic validation, not grasp tuning.
+- Depth noise model in `gazebo_ros_camera` does not match the Orbbec noise profile; perception tuning against sim depth will not transfer 1:1 to hardware.
+- The `arm4_Joiint` URDF typo is preserved, matching the MoveIt config stack on the real robot.
+
+## Out of scope for this file (explicitly deferred)
+
+- Reusable world library (lab, corridor, obstacles)
+- AprilTag fiducials in sim
+- Headless CI mode and automated regression
+- Sim/real topic remapping via namespaces (we use identical names instead)
+- MoveIt2 integration with sim (will happen in Project0 Phase 5, not here)
+- Integration with Project0 orchestrator (happens when Project0 Phase 1 starts)
+# Sim Plans — Results Summary
+
+Per-step summaries of work completed against `sim_plans`.
+Add a new entry below each step as it is closed out.
+
+---
+
+## S.1 Install Gazebo and dev dependencies on Jetson — 2026-04-08 — DONE
+
+**Method:** SSH install to the Jetson (`jetson@192.168.50.103`) plus two
+GUI smoke tests run by the user directly on the Jetson's HDMI console.
+
+**Mid-step pivot:** the plan originally targeted **Gazebo Classic 11**
+via `ros-humble-gazebo-ros-pkgs`. That package is no longer in the
+Humble apt repo — the repo has moved to new-Gazebo (Ignition Fortress)
+via `ros_gz`. Decision made with user to switch to **Ignition Fortress
+(Gazebo 6.16) + `ros_gz` + `gz_ros2_control`**, justified by long-term
+sustainability: Classic is EOL and being removed from repos, new Gazebo
+is the direction Jazzy/Rolling take by default. `sim_plans` was updated
+in place to reflect the new choice (package names, plugin class names,
+file formats `.sdf` vs `.world`, launch incantations) before installing.
+
+**Commands run:**
+```bash
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    ros-humble-ros-gz \
+    ros-humble-gz-ros2-control \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers
+```
+(xacro, joint-state-broadcaster, joint-trajectory-controller, and
+ros2_control-test-assets were already present on the robot.)
+
+**Packages actually installed** (via transitive resolution, notable ones):
+- `libignition-gazebo6-dev` 6.16.0 — Fortress binary + dev headers
+- `libignition-sensors6-dev` 6.8.0
+- `ros-humble-ros-gz` 0.244.23 (metapackage)
+- `ros-humble-ros-gz-sim` 0.244.23
+- `ros-humble-ros-gz-sim-demos` 0.244.23
+- `ros-humble-ros-gz-bridge`, `ros-humble-ros-gz-image`,
+  `ros-humble-ros-gz-interfaces`
+- `ros-humble-gz-ros2-control` 0.7.18
+
+**Verification:**
+
+| Check | Result |
+|---|---|
+| `ign gazebo --version` | **Gazebo Sim 6.16.0** ✅ |
+| `ros2 pkg list \| grep ros_gz` | `ros_gz`, `ros_gz_bridge`, `ros_gz_image`, `ros_gz_interfaces`, `ros_gz_sim`, `ros_gz_sim_demos` (+ `gz_ros2_control`) ✅ |
+| Raw `ign gazebo -v 4 empty.sdf` on HDMI | GUI opens, empty world renders ✅ |
+| `ros2 launch ros_gz_sim gz_sim.launch.py 'gz_args:=empty.sdf -r'` | GUI opens under ROS 2 launch ✅ |
+
+**Non-fatal noise observed** (do not chase these, they are benign):
+
+- `libEGL warning: MESA-LOADER: failed to open nvidia-drm ...` and
+  `libEGL warning: egl: failed to create dri2 screen` — Mesa tries to
+  load an NVIDIA DRI driver at a path that doesn't exist, then falls
+  back to a working renderer. GUI still opens.
+- `WARNING: Package name "yahboom_M3Pro_*" does not follow the naming
+  conventions.` — Yahboom's CamelCase package names violate ROS 2
+  naming rules; `ros2 launch` prints a warning on every workspace
+  scan. Cosmetic.
+
+**Lessons learned (logged in `sim_plans` S.1 section):**
+
+1. **Launch argument quoting:** shell strips `gz_args:="empty.sdf -r"`.
+   Always single-quote the whole `'gz_args:=empty.sdf -r'` token.
+2. **Without `-r`**, Gazebo starts paused — press play manually.
+3. **The two Mesa EGL warnings above are fine** on this Jetson. Do
+   not spend time fixing them unless the GUI actually fails.
+4. **Cosmetic package-name warnings are fine** — they come from
+   Yahboom's existing workspaces, not from our sim work.
+
+**Incidental finding — LiDAR open item closed:** the Yahboom login
+banner displayed `RADAR: Tminl-plus*2`, prompting a visual inspection.
+User confirmed **2 × LD-Mini Plus 180° LiDARs**, diagonally placed
+(front-right forward-facing + back-left rear-facing), merged via
+`ira_laser_tools` to produce a 360° `/scan_multi`. This closes the
+"LiDAR presence and model" open item from task 0.1 in
+`../Robot_info/` — see updated `HARDWARE.md` for the full revised
+LiDAR section. Two sub-items (which serial port each LiDAR uses,
+and where the actual driver package lives) are deferred to Phase 3
+bringup.
+
+**Nothing created on the robot yet beyond installed apt packages.**
+No new files, no workspaces, no URDF edits. `m3pro_gazebo` package
+is created in S.2.
+
+**Status:** S.1 marked done in `sim_plans`.
+
+---
+
+## S.2 Create the `m3pro_gazebo` ROS 2 package — 2026-04-08 — DONE
+
+**Method:** SSH to the Jetson. Created a fresh ROS 2 workspace and a
+data-only ament_cmake package. No C++ or Python code generated; the
+package exists solely to hold URDF, worlds, launch files, controller
+configs, and meshes.
+
+**Workspace and package location (Jetson):**
+```
+~/m3pro_gazebo_ws/
+├── src/
+│   └── m3pro_gazebo/
+│       ├── CMakeLists.txt     (data-only, single install rule)
+│       ├── package.xml        (Apache-2.0, exec_depends only)
+│       ├── urdf/              (empty, populated in S.3)
+│       ├── worlds/            (empty, populated in S.5)
+│       ├── launch/            (empty, populated in S.5/S.6)
+│       ├── config/            (empty, populated in S.4)
+│       └── meshes/            (20 STL files copied from Yahboom pkg)
+├── build/
+└── install/
+```
+
+**Steps executed:**
+
+1. `mkdir -p ~/m3pro_gazebo_ws/src && cd ~/m3pro_gazebo_ws/src`
+2. `ros2 pkg create --build-type ament_cmake m3pro_gazebo --dependencies ros_gz_sim ros_gz_bridge gz_ros2_control xacro robot_state_publisher`
+3. Created the five subdirectories; removed the auto-generated `src/`
+   and `include/m3pro_gazebo/` (we don't build code here)
+4. Copied all 20 `.STL` meshes from
+   `~/yahboomcar_ws/src/yahboom_M3Pro_description/meshes/` into
+   `m3pro_gazebo/meshes/`. The sim package owns its own copy so it
+   doesn't couple to Yahboom's description package at runtime.
+5. Replaced the generated `CMakeLists.txt` with a minimal data-only
+   version (just `install(DIRECTORY ... DESTINATION share/${PROJECT_NAME})`).
+6. Rewrote `package.xml`: Apache-2.0 license, a real description,
+   runtime-only dependencies moved to `exec_depend` (this package
+   doesn't need build-time dependencies on anything beyond
+   `ament_cmake`), added `ros_gz_image`, `joint_state_broadcaster`,
+   `joint_trajectory_controller` since we'll need them at runtime.
+7. `colcon build --packages-select m3pro_gazebo` → **succeeds in 1.45 s**.
+8. Verified install layout: `install/m3pro_gazebo/share/m3pro_gazebo/`
+   contains `urdf/`, `worlds/`, `launch/`, `config/`, `meshes/` (with
+   all 20 STL files), plus the standard ROS 2 package hooks.
+9. `ros2 pkg prefix m3pro_gazebo` resolves after sourcing the install,
+   confirming the package is discoverable.
+
+**Design decisions baked in:**
+
+- **Data-only package, not code.** All simulation behavior comes from
+  Gazebo system plugins + configuration; no custom nodes belong here.
+  Any Python or C++ helper nodes added later should go in a sibling
+  package to keep the boundary clean.
+- **Package owns its own mesh copies** rather than depending on
+  `yahboom_M3Pro_description`. This decouples sim from any future
+  changes Yahboom makes to their description package and allows the
+  sim package to be used independently.
+- **License: Apache-2.0**, consistent with upstream ROS ecosystem
+  defaults and compatible with anything we're likely to build on top.
+
+**Not yet done (deferred to later steps):**
+
+- URDF → xacro conversion with sim tags, inertials, collisions,
+  plugins (S.3 + S.4)
+- World files `empty.sdf` and `tabletop.sdf` (S.5)
+- Launch files and ros_gz_bridge config (S.5/S.6)
+- Mac-side copy and git init (S.8)
+
+**Status:** S.2 marked done in `sim_plans`.
+
+---
+
+## S.3 Convert URDF to xacro with sim/real toggle — 2026-04-08 — DONE
+
+**Method:** SSH to the Jetson. Copied the existing Yahboom URDF into
+the sim package, normalized line endings, retargeted mesh paths,
+wrapped in xacro, and verified with the xacro processor + `check_urdf`.
+
+**Big positive surprise:** the Yahboom URDF is already fully
+physics-ready. Every one of the 20 links has a well-formed
+`<inertial>` block with positive mass and a positive-definite inertia
+matrix, plus both `<visual>` AND `<collision>` geometry. This removed
+what I expected to be the heaviest slice of S.3 (adding inertials and
+collisions by hand).
+
+**Pre-work survey:** used Python + ElementTree over SSH to enumerate
+every link and confirm each has:
+- `<inertial>` with a mass > 0
+- `<inertial>/<inertia>` with `ixx`, `iyy`, `izz` all > 0
+- `<visual>`
+- `<collision>`
+
+All 20 links passed. Total advertised robot mass ≈ 1.76 kg, with
+`base_link` at 871 g, arm segments totalling ≈ 220 g, 4 wheels at
+97 g each, and a few tens of grams distributed across camera,
+gripper, and finger linkages. Yahboom's SolidWorks export produced
+realistic values — not the `0.001` placeholder garbage I was
+braced for.
+
+**Edits applied to `m3pro_gazebo/urdf/m3pro.xacro`:**
+
+1. **Line endings:** CRLF → LF via `sed -i "s/\r$//"` (SolidWorks
+   exporter ships with Windows line endings).
+2. **xacro namespace:** added `xmlns:xacro="http://www.ros.org/wiki/xacro"`
+   to the `<robot>` root element.
+3. **xacro arg + property:** inserted right after the opening robot
+   tag:
+   ```xml
+   <xacro:arg name="use_sim" default="true"/>
+   <xacro:property name="use_sim" value="$(arg use_sim)"/>
+   ```
+   This gives both command-line override (`xacro ... use_sim:=false`)
+   and in-file conditional access (`<xacro:if value="${use_sim}">`).
+   Currently gates nothing — it becomes load-bearing in S.4 when the
+   Gazebo `<gazebo>` plugin blocks are added.
+4. **Mesh retarget:** `package://yahboom_M3Pro_description/meshes/` →
+   `package://m3pro_gazebo/meshes/` (38 occurrences). The sim package
+   now resolves its own mesh copies rather than depending on the
+   Yahboom description package at runtime.
+5. **`arm4_Joiint` typo:** untouched. Confirmed via grep that the typo
+   still appears exactly once in the file. See
+   `../Robot_info/tf_tree_spec.md` for why this is intentional.
+
+**Verification:**
+
+| Check | Result |
+|---|---|
+| `xacro m3pro.xacro use_sim:=true` | ✅ expands to 580 lines, parses |
+| `xacro m3pro.xacro use_sim:=false` | ✅ expands identically (no gated content yet) |
+| `check_urdf <expanded>` | ✅ reports `Successfully Parsed XML`; tree root `base_link` has 7 children matching the spec in `tf_tree_spec.md` |
+| `grep -c arm4_Joiint` | ✅ returns `1` |
+| `grep -c package://m3pro_gazebo` | ✅ returns `38` |
+| `grep -c yahboom_M3Pro_description` | ✅ returns `0` (cleanly retargeted) |
+| `colcon build --packages-select m3pro_gazebo` | ✅ rebuilds in 0.14 s |
+| `install/m3pro_gazebo/share/m3pro_gazebo/urdf/` | ✅ contains `m3pro.xacro` |
+
+**Design decisions:**
+
+- **Single-file xacro, no macro library split.** The URDF is small
+  enough (~580 lines expanded) that splitting into
+  `m3pro_chassis.xacro` / `m3pro_arm.xacro` / `m3pro_sensors.xacro`
+  macros would add more overhead than it removes. Revisit if the
+  file grows beyond ~1500 lines.
+- **`use_sim` arg even though no code gates on it yet.** Declared
+  up front so S.4 can add `<xacro:if>` conditional blocks without
+  touching the arg boilerplate again. Also documents the design
+  intent that the same file must work for both sim and real.
+- **Yahboom URDF used as base**, not a hand-rebuild. This preserves
+  all the real-world measurements (link origins, joint limits, mesh
+  poses, inertial values) and inherits any future Yahboom updates
+  via diff + re-copy. The cost is inheriting their quirks (the typo,
+  the orphan `arm_base_Link`, the stale `Camera` link). Those are
+  documented in `../Robot_info/tf_tree_spec.md` and are acceptable.
+
+**Not yet done (deferred to S.4):**
+
+- No `<gazebo>` material colour blocks
+- No `<gazebo>` sensor plugins (camera)
+- No `<gazebo>` system plugins (diff-drive, ros2_control)
+- No `<ros2_control>` block for the arm
+- No `<gz_frame_id>` / optical frame naming overrides
+
+**Status:** S.3 marked done in `sim_plans`.
+
+---
+
+## S.4 Add Gazebo plugins — 2026-04-08 — DONE
+
+**Method:** wrote a ~150-line Gazebo xacro block as a heredoc on the
+Jetson, inserted it before `</robot>` in `m3pro.xacro` via a Python
+helper (safer than sed for multi-line XML), wrote two config YAMLs
+(`arm_controllers.yaml`, `ros_gz_bridge.yaml`), rebuilt the package,
+and verified both sim and real xacro expansions parse cleanly.
+
+**Files modified / created:**
+
+| File | Change |
+|---|---|
+| `src/m3pro_gazebo/urdf/m3pro.xacro` | +154 lines of `<xacro:if use_sim>`-gated Gazebo tags |
+| `src/m3pro_gazebo/config/arm_controllers.yaml` | NEW, 60 lines |
+| `src/m3pro_gazebo/config/ros_gz_bridge.yaml` | NEW, 57 lines |
+
+**Gazebo block contents (all gated by `<xacro:if value="${use_sim}">`):**
+
+1. **Cosmetic material colours** for chassis, arm, wheels, gripper,
+   camera link.
+2. **`<ros2_control>` hardware block** listing `arm1_Joint`,
+   `arm2_Joint`, `arm3_Joint`, `arm4_Joiint` (typo preserved!),
+   `arm5_Joint`, `rlink1_Joint` (driven gripper), and `llink1_Joint`
+   (mimic of `rlink1_Joint` with multiplier `-1`). Hardware interface
+   is `ign_ros2_control/IgnitionSystem`. Command interface:
+   `position`. State interfaces: `position`, `velocity`.
+3. **`gz_ros2_control` system plugin** (`libign_ros2_control-system.so`)
+   pointing at `$(find m3pro_gazebo)/config/arm_controllers.yaml`.
+4. **DiffDrive plugin** (`ignition::gazebo::systems::DiffDrive`) using
+   `lwheel1_Joint + lwheel2_Joint` as left side and `rwheel1_Joint +
+   rwheel2_Joint` as right side. `wheel_separation=0.1955 m`
+   (derived from URDF wheel origins), `wheel_radius=0.04 m` (from
+   the wheel-centre z-offset). Publishes GZ `/odom`, `/tf`, consumes
+   GZ `/cmd_vel`.
+5. **JointStatePublisher system plugin** so the wheel joint states
+   end up on `/joint_states` alongside the arm joint states.
+6. **RGBD camera sensor** on link `DCW2`: 640×480 @ 30 Hz, hFOV
+   60° (1.0472 rad), clip 0.1–8.0 m, gz topic root `camera`,
+   `gz_frame_id=DCW2`.
+
+**`arm_controllers.yaml`:** `controller_manager` at 100 Hz with
+`joint_state_broadcaster`, `arm_controller` (JointTrajectoryController
+for the 5 arm joints), and `gripper_controller` (JointTrajectoryController
+for `rlink1_Joint` only — `llink1_Joint` follows via ros2_control's
+mimic mechanism, not via a separate controller).
+
+**`ros_gz_bridge.yaml`:** 7 bridge entries:
+- `/clock` GZ→ROS (so `use_sim_time` works)
+- `/cmd_vel` ROS→GZ (Twist)
+- `/odom` GZ→ROS (Odometry)
+- `/tf` GZ→ROS (Pose_V → TFMessage)
+- `/camera/color/image_raw` GZ→ROS (from gz `/camera/image`)
+- `/camera/depth/image_raw` GZ→ROS (from gz `/camera/depth_image`)
+- `/camera/color/camera_info` GZ→ROS (from gz `/camera/camera_info`)
+
+The ROS-side names deliberately match what the real `orbbec_camera`
+driver publishes so downstream perception code doesn't need to
+namespace-switch between sim and real.
+
+**Verification gate:**
+
+| Check | Result |
+|---|---|
+| `colcon build` | ✅ 0.14 s |
+| `xacro m3pro.xacro use_sim:=true` | ✅ 734 lines (580 base + 154 gated block) |
+| `check_urdf` on sim expansion | ✅ `Successfully Parsed XML`, tree root unchanged |
+| `xacro m3pro.xacro use_sim:=false` | ✅ 580 lines, Gazebo block stripped |
+| `check_urdf` on real expansion | ✅ identical to post-S.3 state |
+| `grep ign_ros2_control` in sim expansion | 2 hits ✅ |
+| `grep DiffDrive` in sim expansion | 2 hits ✅ |
+| `grep rgbd_camera` in sim expansion | 1 hit ✅ |
+| `grep arm4_Joiint` in sim expansion | 3 hits (URDF joint + ros2_control entry + comment) ✅ |
+| `grep arm4_Joiint` in real expansion | 1 hit (original only, no sim pollution) ✅ |
+
+**Design decisions:**
+
+- **Single `<xacro:if>` gate, not granular gates per plugin.** Cleaner
+  diff, one point of control. If we ever need finer gating (e.g.
+  "sim without the camera"), we can add sub-args then.
+- **Mimic expressed at ros2_control level** rather than editing URDF
+  `<mimic>` tags. ros2_control 2.x supports `<param name="mimic">`,
+  which means we don't touch the raw joint definitions inherited
+  from Yahboom. Cleaner separation; easier to re-sync with upstream
+  URDF updates later.
+- **No `<gripper_controller>` for `llink1_Joint`** — ros2_control's
+  mimic binding handles it for free. Only `rlink1_Joint` is in the
+  controller's joint list.
+- **Arm and gripper in the SAME `<ros2_control>` system block** (single
+  hardware interface) rather than two separate systems. Fewer moving
+  parts and matches what `gz_ros2_control` expects.
+- **Wheel separation derived from URDF**, not guessed. Explicit formula
+  recorded in the sim_plans comments so future maintainers can redo
+  it if the chassis URDF changes.
+- **Camera clip far = 8.0 m**, not the 4.0 m from the real LiDAR merge
+  config. Camera range ≠ laser range. 8 m matches typical Orbbec
+  DaBai DCW2 spec and lets sim perception see the bin even when the
+  arm is in observation pose.
+
+**Explicit non-goals (left for later steps or dropped):**
+
+- **No `effort` command/state interfaces** on the arm — the real
+  servos don't report effort reliably (open item 0.1), and sim
+  effort doesn't match real anyway (documented limitation). Stays
+  `position`-only until we have real data.
+- **No tuning of physics parameters** (friction, damping, etc.).
+  Defaults will be used until something misbehaves visibly in S.7.
+- **No LiDAR sensor in the URDF yet.** The real robot has 2 × LD-Mini
+  Plus LiDARs (confirmed in S.1 summary) but the perception pipeline
+  for Project0 Phase 1 only needs the RGBD camera. LiDAR sim can be
+  added later without disturbing the arm/camera work.
+- **No fine sensor noise modelling.** Sim depth noise doesn't match
+  the Orbbec noise profile and tuning perception against sim depth
+  will not transfer 1:1 (already flagged in the sim_plans Known
+  Limitations section).
+- **No sensors system plugin in the URDF.** That plugin is world-
+  scoped, not model-scoped. It'll be added to `empty.sdf` /
+  `tabletop.sdf` in S.5.
+
+**Not yet tested**: the sim URDF parses, but we haven't spawned the
+robot in Gazebo yet. That's S.5/S.7 work. If any plugin filenames,
+joint names, or interface mismatches exist, they'll surface during
+the verification gate in S.7.
+
+**Status:** S.4 marked done in `sim_plans`.
+
+---
+
+## S.5 Worlds and spawn — 2026-04-08 — DONE
+
+**Method:** wrote three files directly on the Jetson via heredoc, then
+rebuilt and ran three layers of static validation.
+
+**Files created:**
+
+| File | Lines | Purpose |
+|---|---|---|
+| `src/m3pro_gazebo/worlds/empty.sdf` | 72 | Minimal Fortress world: 5 system plugins + sun + ground plane. For smoke tests. |
+| `src/m3pro_gazebo/worlds/tabletop.sdf` | 157 | Same baseline + red cube (pickup target) + blue open-top bin (drop target). |
+| `src/m3pro_gazebo/launch/spawn_robot.launch.py` | 71 | xacro → robot_state_publisher → `ros_gz_sim create` spawn pipeline. |
+
+**`empty.sdf` contents:**
+
+- **Mandatory Fortress plugins** (all world-scoped):
+  - `ignition::gazebo::systems::Physics`
+  - `ignition::gazebo::systems::SceneBroadcaster`
+  - `ignition::gazebo::systems::UserCommands` (needed so
+    `ros_gz_sim create` can spawn entities at runtime)
+  - `ignition::gazebo::systems::Sensors` with `<render_engine>ogre2</render_engine>` — this is the plugin that actually runs the camera sensor's render loop; without it, the RGBD camera block from S.4 wouldn't publish anything
+  - `ignition::gazebo::systems::Contact` (for future grasp work, not
+    strictly needed now but cheap to include)
+- Directional sun light
+- Ground plane (100×100 m, light grey)
+- Gravity -9.81 m/s²
+
+**`tabletop.sdf` extras:**
+
+- **Red cube `target_cube`**: 4 cm side, 20 g, placed at (0.25, 0, 0.02) — 25 cm directly in front of the robot's origin, resting on the ground plane. Inertia tensor computed as `(1/6) * m * L² = 5.33e-6 kg·m²` for all three diagonals. Friction µ = 1.0 on all contacts.
+- **Blue open-top bin `drop_bin`**: 15×15 cm footprint, 10 cm tall, 5 mm wall thickness, static. Built as one floor + four walls (each its own collision/visual inside a single link). Placed at (0, 0.4, 0) — 40 cm to the robot's left. Open top so the arm can drop the cube in.
+- No actual "tabletop" — the cube and bin sit directly on the ground plane. The M3PRO is a floor-dwelling mobile robot so a table would just be an obstacle. Decision documented in the sim_plans.
+
+**`spawn_robot.launch.py` pipeline:**
+
+1. `xacro` substitution runs `xacro m3pro.xacro use_sim:=<arg>` and
+   captures the stdout as a string.
+2. `robot_state_publisher` publishes the result on
+   `/robot_description` (transient-local QoS) and starts publishing
+   `/tf` + `/tf_static` from `/joint_states` as the sim drives them.
+   `use_sim_time: true` is set so TF timestamps use sim clock.
+3. `ros_gz_sim create` subscribes to `/robot_description`, receives
+   the URDF, and calls the world's `create` service to spawn the
+   model at (`x`, `y`, `z`) with name `entity_name`.
+
+Launch args exposed: `use_sim` (default `true`), `entity_name`
+(default `m3pro`), `x`/`y`/`z` (defaults `0/0/0.05` — 5 cm above
+ground so the robot settles rather than clipping).
+
+**Explicit non-goal:** this launch file does NOT start Gazebo. The
+top-level `sim.launch.py` in S.6 will start the world, then include
+this spawn launch. Keeping them separate lets you iterate on spawn
+behaviour without bouncing the whole sim.
+
+**Verification:**
+
+| Check | Result |
+|---|---|
+| `colcon build --packages-select m3pro_gazebo` | ✅ 0.14 s |
+| `install/.../worlds/` contains both files | ✅ |
+| `install/.../launch/spawn_robot.launch.py` present | ✅ |
+| Python AST parse of `spawn_robot.launch.py` | ✅ |
+| XML parse of `empty.sdf` | ✅ |
+| XML parse of `tabletop.sdf` | ✅ |
+| **`ign sdf -k empty.sdf`** | ✅ **Valid** (full Fortress schema check) |
+| **`ign sdf -k tabletop.sdf`** | ✅ **Valid** |
+
+**Not yet tested**: the worlds have not been loaded into a live Gazebo
+instance yet. The spawn launch has not been invoked yet. That's S.7
+verification territory — any runtime-only bugs (wrong plugin filenames,
+mis-named wheel joints, missing service handlers, bad Sensors plugin
+rendering on this Jetson) will surface then.
+
+**Design decisions:**
+
+- **Separate worlds, not one world with an argument-gated cube/bin.**
+  Empty for smoke tests, tabletop for real pick-and-place work.
+  Cheaper than one huge world with `<xacro:if>` equivalents.
+- **Cube dimensions and mass are guesses for now.** When the real
+  cube is chosen for the project, update the `<size>` and `<mass>`
+  in `tabletop.sdf` to match. Friction at µ=1.0 is optimistic and
+  will almost certainly need to come down after the first grasp
+  attempt in sim.
+- **Bin built from 5 primitive boxes** rather than a single mesh.
+  Primitives collide faster, are easier to resize, and don't need
+  a separate `.dae`/`.stl` file in the package.
+- **Cube/bin placement is hard-coded.** A future enhancement is to
+  parameterize these via launch args so the same world file supports
+  multiple scenarios. Explicitly deferred.
+- **`use_sim_time: true` on robot_state_publisher** is critical — if
+  omitted, RSP timestamps TFs with wall-clock while the rest of the
+  stack uses sim clock, and `tf2_ros::Buffer::lookupTransform` calls
+  will silently fail with "extrapolation into the future" errors.
+
+**Status:** S.5 marked done in `sim_plans`.
+
+---
+
+## S.6 Top-level bringup launch — 2026-04-08 — DONE
+
+**Method:** wrote `launch/sim.launch.py` (179 lines) as a single file
+that orchestrates the whole sim bringup, rebuilt the package, and
+validated the action graph via `ros2 launch --print` which expands
+every substitution without running anything.
+
+**Launch pipeline (in order):**
+
+1. **`SetEnvironmentVariable(IGN_GAZEBO_RESOURCE_PATH)`** — prepends
+   the parent directory of `get_package_share_directory("m3pro_gazebo")`
+   onto the Fortress resource path. This is required so Gazebo can
+   resolve `package://m3pro_gazebo/meshes/*` URIs in the URDF.
+   Without it, the robot spawns invisible / meshless.
+2. **Include `ros_gz_sim/launch/gz_sim.launch.py`** with
+   `gz_args:=<absolute world path> -r -v 3`. The `-r` makes Gazebo
+   start running (not paused); `-v 3` sets verbose logging level 3
+   so we can actually see errors during the first debug run.
+3. **`ros_gz_bridge/parameter_bridge` node** with
+   `config_file:=<share>/config/ros_gz_bridge.yaml` and
+   `use_sim_time: true`. Independent of the rest; can run in
+   parallel with Gazebo startup.
+4. **Include `spawn_robot.launch.py`** from S.5: xacro expansion →
+   `robot_state_publisher` with `use_sim_time: true` → `ros_gz_sim
+   create -topic /robot_description`. The `use_sim` and `entity_name`
+   launch args are threaded through.
+5. **`spawner joint_state_broadcaster`** — runs as soon as the launch
+   system starts it; the spawner itself blocks internally until the
+   `/controller_manager` service shows up, which happens after
+   `gz_ros2_control` has finished loading the model.
+6. **`RegisterEventHandler(OnProcessExit(spawn_jsb, on_exit=[spawn_arm]))`**
+   — the `spawner` exits cleanly after successfully loading its
+   controller, which fires this handler and starts `spawn_arm`.
+7. **`RegisterEventHandler(OnProcessExit(spawn_arm, on_exit=[spawn_gripper]))`**
+   — same pattern for the gripper controller.
+8. **`rviz2`** gated on `IfCondition(LaunchConfiguration("rviz"))`
+   with `use_sim_time: true` and no saved config (default RViz
+   comes up empty; operator manually adds displays for now — a
+   saved config can be committed later after we know what displays
+   are actually useful).
+
+**Launch arguments exposed:**
+
+| Arg | Default | Purpose |
+|---|---|---|
+| `world` | `tabletop.sdf` | Selects which world to load. `empty.sdf` also available. |
+| `use_sim` | `true` | xacro toggle. Reserved so the same launch file could theoretically bring up the real-robot stack, though that is not how the real robot is normally started. |
+| `rviz` | `true` | Whether to start RViz2. Set `false` for headless or CI runs. |
+| `entity_name` | `m3pro` | Gazebo model name. Useful if multi-robot sims ever happen. |
+
+**Sequencing rationale:**
+
+- `ros_gz_sim create` can run before Gazebo is fully up: it subscribes
+  to `/robot_description` (transient-local QoS) and calls the spawn
+  service on the world, retrying until the service exists.
+- The spawner nodes can run before the controller_manager is up; they
+  wait on the `/controller_manager/list_controllers` service with a
+  default timeout of 10 s (extendable via `--controller-manager-timeout`).
+- Chaining via `OnProcessExit` rather than `TimerAction` means the
+  controllers come up as fast as possible without racing — each waits
+  on the previous one being verified.
+
+**Verification:**
+
+| Check | Result |
+|---|---|
+| `colcon build --packages-select m3pro_gazebo` | ✅ 0.18 s |
+| Python AST parse of `sim.launch.py` | ✅ |
+| `ros2 launch --print m3pro_gazebo sim.launch.py` | ✅ all 13 actions resolved, no substitution errors, no missing packages |
+
+**Design decisions logged:**
+
+- **Single launch file, not a multi-file hierarchy.** Keeps the full
+  pipeline visible in one place. `spawn_robot.launch.py` stays
+  separately includable because iterating on spawn behaviour
+  (testing different start poses) is a thing you do repeatedly.
+- **No `use_sim_time` flag propagation helper** — each node that
+  cares has it hard-coded to `true`. We only ever run this launch
+  file for sim. If the real robot ever needs this file (which is not
+  the plan), we will revisit.
+- **No RViz config committed yet.** Saved configs become valuable
+  after you know which displays you use. Committing one now would
+  just be noise; added in a later polishing step if it proves
+  worthwhile.
+- **Verbose logging `-v 3` on Gazebo.** Useful for first-time debug;
+  noisy but will catch the usual plugin-not-found / sensor-rendering
+  errors on startup. Can be dialed back to `-v 2` once the sim is
+  stable.
+
+**Not yet tested**: `ros2 launch m3pro_gazebo sim.launch.py` has not
+been invoked against a live system. Any runtime-only failures
+(wrong plugin filenames, mesh resolution issues, controller timeout,
+camera render backend problems, bridge type mismatches) will show up
+in S.7 when the verification gate runs the actual launch on the
+Jetson with HDMI attached.
+
+**Status:** S.6 marked done in `sim_plans`.
+
+---
+
+## S.7 Verification Gate — 2026-04-14 — DONE (after extensive debugging)
+
+**Method:** iterative launch-test-fix cycle on the Jetson (HDMI
+console) with SSH diagnostics in parallel. This step consumed most
+of the session due to a chain of issues that had to be resolved
+sequentially — each fix revealed the next problem underneath.
+
+### Bugs found and fixed (in order of discovery)
+
+**Bug 1 — FASTRTPS_DEFAULT_PROFILES_FILE breaks local DDS.**
+The Yahboom `.bashrc` exports a FastDDS XML profile that whitelists
+`0.0.0.0` as a network interface. FastDDS interprets this as "no
+valid interface" and silently blocks ALL node-to-node DDS traffic.
+`robot_state_publisher` publishes `/robot_description` but
+`ros_gz_sim create` never receives it → robot never spawns.
+**Fix:** added `UnsetEnvironmentVariable("FASTRTPS_DEFAULT_PROFILES_FILE")`
+to `sim.launch.py`. Now automatic — user doesn't need to remember.
+
+**Bug 2 — SAFETY: ROS_DOMAIN_ID=30 shared between sim and real.**
+The Yahboom `.bashrc` sets `ROS_DOMAIN_ID=30`. Sim nodes launched
+from that terminal inherited domain 30. Publishing `/cmd_vel` in sim
+reached the real chassis motors and **the robot drove off the table**.
+No damage, caught in time.
+**Fix:** user must `export ROS_DOMAIN_ID=0` before launching sim.
+Documented as SAFETY CRITICAL in `Keep_in_mind`. Cannot be automated
+in the launch file (domain must be set before launch, not inside it).
+
+**Bug 3 — Gripper linkages spinning like helicopter blades.**
+All continuous joints (`rlink2`, `llink2`, `rlink3`, `llink3`,
+`llink1`) had zero damping in the URDF (SolidWorks export defaults).
+Gazebo let them spin freely under simulation noise.
+**Fix:** added `<dynamics damping="0.5" friction="0.1"/>` to all
+continuous joints and `damping="0.1" friction="0.05"` to arm revolute
+joints + `Camera_Joint`. Applied via Python ElementTree.
+
+**Bug 4 — Wheels missing in RViz.**
+Wheel joints were not in the `ros2_control` hardware block, so
+`joint_state_broadcaster` didn't publish their states, and
+`robot_state_publisher` couldn't compute wheel TFs.
+**Fix:** initially added wheels as state-only joints to ros2_control.
+Later removed (see Bug 8) and accepted that wheels don't appear in
+RViz as a trade-off of the final architecture.
+
+**Bug 5 — RViz + Gazebo crashes Jetson (OOM).**
+Running Gazebo GUI + camera rendering + RViz simultaneously exceeded
+the Orin NX's 8 GB RAM. `NvMapMemAllocInternalTagged: error 12`
+warnings preceded a hard crash.
+**Fix:** launch with `rviz:=false`. Launch RViz separately only when
+needed (without Gazebo camera rendering active).
+
+**Bug 6 — Multiple `<gazebo>` blocks dropped by URDF→SDF converter.**
+Three unreferenced `<gazebo>` blocks existed in the xacro (ros2_control
+plugin, DiffDrive plugin, JointStatePublisher plugin). Fortress's
+URDF→SDF converter only processed the first one; the other two were
+silently dropped. DiffDrive never loaded.
+**Fix:** merged all three plugins into a single `<gazebo>` block via
+Python ElementTree.
+
+**Bug 7 — DiffDrive subscribing to wrong topic name.**
+`<topic>cmd_vel</topic>` (no leading `/`) caused DiffDrive to
+subscribe to a relative topic that didn't match the absolute
+`/cmd_vel` published by the bridge.
+**Fix:** changed to `<topic>/cmd_vel</topic>` (absolute path).
+
+**Bug 8 — Wheel joints locked at position 0.**
+SolidWorks exported wheel joints as `revolute` with
+`lower=0 upper=0 effort=0 velocity=0` — effectively locking them.
+**Fix:** changed wheel joints to `continuous` type with
+`<limit effort="10" velocity="20"/>`.
+
+**Bug 9 — Wheel mesh collisions produce no friction in DART.**
+Even with spinning wheels, the STL mesh collision geometry didn't
+generate proper friction forces against the ground plane in DART
+physics. Tried cylinder collisions — same result.
+**Fix (partial):** switched to sphere collisions (radius=0.04).
+Still no traction in DART, but sphere geometry is more reliable.
+
+**Bug 10 — DART physics engine: no wheel traction.**
+Despite sphere collisions, the robot body didn't move. Tried
+switching to Bullet physics — same result.
+**Fix attempt:** added explicit friction (`<mu>100</mu>`) to both
+the ground plane SDF and wheel collision surfaces. Still no traction.
+
+**Bug 11 — `ign_ros2_control/IgnitionSystem` makes joints kinematic.**
+When wheel joints were added to the ros2_control hardware block,
+IgnitionSystem controlled them kinematically (setting velocity directly
+without generating reaction forces on the parent body). The wheels
+spun but produced zero lateral force on the chassis.
+**Fix attempt:** removed wheels from ros2_control, restored DiffDrive
+plugin. DiffDrive also controls wheels kinematically — same result.
+
+**Bug 12 — Base collision mesh sitting on the ground.**
+The base_link collision used the full chassis STL mesh, which
+extended below the wheel contact level. The chassis rested on its
+own mesh, not on the wheels. Wheels bore zero weight → zero normal
+force → zero friction regardless of friction coefficients.
+**Fix:** replaced base_link collision with a raised box
+(`[0.20, 0.18, 0.08]` at `z=0.08`, bottom at `z=0.04`). Confirmed
+wheels then bore full weight. Still no traction — the physics engine
+just doesn't translate wheel rotation into base translation.
+
+**Bug 13 (root cause) — Fortress physics doesn't support friction-based
+driving for URDF-spawned models.**
+After exhausting DART, Bullet, sphere/cylinder/mesh collisions,
+explicit friction on both surfaces, ros2_control velocity, DiffDrive
+velocity, and base collision raised above wheels — the conclusion is
+that Ignition Fortress 6.16's physics integration does not reliably
+convert wheel joint rotation into base translation via friction for
+URDF-spawned models. This is a known class of issue in new-Gazebo
+simulation of mobile robots. The body CAN move (teleport works,
+gravity works), but wheel-ground traction never engages.
+
+**Final fix — VelocityControl kinematic plugin.**
+Replaced DiffDrive with `ignition::gazebo::systems::VelocityControl`
+which directly sets the model's world velocity (no physics, no friction,
+no wheel contact needed). Added `OdometryPublisher` for `/odom` and
+`odom→base_link` TF. This is the standard approach for mobile robot
+sim when physics-based driving is unreliable.
+
+Trade-offs accepted:
+- Wheels don't visually spin in sync with base motion (cosmetic)
+- No wheel-ground physics (can't simulate wheel slip, skid, etc.)
+- Sim driving is kinematic — the robot slides rather than rolls
+- Wheels not in RViz TF tree (no joint_states for them)
+
+These trade-offs are explicitly documented in `sim_plans` Known
+Limitations. For Project0's purposes (perception, arm control, nav
+path planning), kinematic base motion is fully sufficient.
+
+### Final S.7 verification results
+
+All checks performed via SSH (`ROS_DOMAIN_ID=0`) against the running
+sim on the Jetson HDMI console.
+
+| Check | Result |
+|---|---|
+| Robot spawns in Gazebo (ground + cube + bin visible) | ✅ |
+| TF tree: `base_link → arm1..arm5 → Gripping`, `arm4 → DCW2` | ✅ matches `tf_tree_spec.md` |
+| `/joint_states` publishing (arm + gripper) | ✅ |
+| `/camera/color/image_raw` | ✅ ~19 Hz |
+| `/camera/depth/image_raw` | ✅ ~18 Hz |
+| `/camera/color/camera_info` (640×480, frame DCW2) | ✅ |
+| `/cmd_vel` forward → robot translates in Gazebo | ✅ (via VelocityControl) |
+| `/cmd_vel` angular → robot rotates in Gazebo | ✅ |
+| `/odom` publishing | ✅ ~37 Hz (via OdometryPublisher) |
+| `arm_controller/follow_joint_trajectory` action | ✅ SUCCEEDED |
+| `gripper_controller/follow_joint_trajectory` action | ✅ SUCCEEDED |
+| No real robot motion during sim | ✅ (domain 0, isolated) |
+
+### Architecture summary (final state after all fixes)
+
+**Base motion:** `VelocityControl` system plugin (kinematic, in merged
+`<gazebo>` block) + `OdometryPublisher` system plugin. ROS `/cmd_vel`
+→ `ros_gz_bridge` → GZ `/cmd_vel` → VelocityControl moves model.
+GZ `/odom` → bridge → ROS `/odom`.
+
+**Arm + gripper:** `ign_ros2_control/IgnitionSystem` + `gz_ros2_control`
+plugin. `joint_state_broadcaster` + `arm_controller`
+(JointTrajectoryController, 5 joints) + `gripper_controller`
+(JointTrajectoryController, rlink1_Joint). `llink1_Joint` mimics
+`rlink1_Joint` at ros2_control level.
+
+**Camera:** SDF `<sensor type="rgbd_camera">` on link DCW2. GZ topics
+bridged to real Orbbec names via `ros_gz_bridge.yaml`.
+
+**Physics:** Bullet engine. Sphere wheel collisions. Raised box
+base collision. High friction on ground plane. (All of this matters
+for arm/gripper physics even though base motion is kinematic.)
+
+**Launch:** `ros2 launch m3pro_gazebo sim.launch.py rviz:=false` with
+`ROS_DOMAIN_ID=0`. Launch file auto-unsets FASTRTPS.
+
+**Status:** S.7 marked done in `sim_plans`.
+
+---
+
+## S.8 Documentation + commit — 2026-04-15 — DONE
+
+**Method:** pulled the package from the Jetson to the Mac (authoritative
+copy for git), wrote a README, initialized a local git repo, and synced
+the two new files back to the Jetson.
+
+**Steps executed:**
+
+1. `rsync -av --exclude build --exclude install --exclude log jetson:~/m3pro_gazebo_ws/src/m3pro_gazebo/ ~/Documents/Projects/m3pro_gazebo/` — pulled 20 STL meshes (~42 MB), URDF, worlds, launch files, configs, manifests.
+2. Wrote `README.md` at the package root covering: purpose, prerequisites (apt install list), build, **SAFETY note** on `ROS_DOMAIN_ID=30` collision with the real robot, launch args (`world`, `rviz`, `use_sim`, `entity_name`), ROS topic contract (matches real robot: `/cmd_vel`, `/odom`, `/joint_states`, `/tf`, `/camera/color/image_raw`, `/camera/depth/image_raw`, `/camera/color/camera_info`, `/arm_controller`, `/gripper_controller`), known limitations, package layout.
+3. Wrote `.gitignore` for `build/`, `install/`, `log/`, `__pycache__`, `.pyc`, `.DS_Store`.
+4. `git init -b main` + `git add .` + commit (`9fcf914`) with author pulled from user context (no global git config assumptions). Commit message summarizes the package contents and cites preserved quirks.
+5. `rsync README.md .gitignore` back to Jetson so both sides are in parity.
+
+**Known limitations section** (reproduced in README) captures every
+non-obvious trade-off a future maintainer needs:
+
+- Kinematic base via `VelocityControl` — no wheel traction in Fortress
+- Mecanum strafe not simulated
+- Servo effort not modelled — grasp-confirmation must be validated on HW
+- Parallel gripper grasp physics unreliable in Gazebo
+- Orbbec depth noise profile not reproduced
+- `arm4_Joiint` typo preserved on purpose (matches MoveIt config)
+- RViz + Gazebo + camera rendering OOMs the Jetson Orin NX 8 GB — run with `rviz:=false`
+
+**Deferred (not done, by design):**
+
+- **No remote push.** User did not specify a remote (GitHub/GitLab/etc.).
+  Commit lives locally in `~/Documents/Projects/m3pro_gazebo/.git` until
+  a remote is chosen. When the user picks one:
+  `git remote add origin <url> && git push -u origin main`.
+- **Jetson git sync.** The Jetson still has a loose working tree, not a
+  cloned repo. Two options once a remote exists: (a) `git clone` on the
+  Jetson into a fresh workspace, or (b) `git init` on the Jetson and set
+  the Mac as a remote. Both deferred until remote decision.
+
+**Status:** S.8 marked done in `sim_plans`. All sim_plans sections complete.
+
+---

@@ -1,0 +1,38 @@
+# Key facts to remember
+
+## SAFETY — READ FIRST
+
+- **Sim MUST use `ROS_DOMAIN_ID=0`. Real robot uses domain 30.** If both run on domain 30, publishing `/cmd_vel` in sim reaches the real chassis motors and the robot moves physically. Incident on 2026-04-14: robot drove off the table during S.7 verification. Always run `export ROS_DOMAIN_ID=0` before launching the sim. Also `unset FASTRTPS_DEFAULT_PROFILES_FILE` before sim (Yahboom's DDS profile blocks local node communication).
+- **Correct sim launch sequence:**
+  ```
+  source /opt/ros/humble/setup.bash
+  source ~/m3pro_gazebo_ws/install/setup.bash
+  export ROS_DOMAIN_ID=0
+  ros2 launch m3pro_gazebo sim.launch.py rviz:=false
+  ```
+  (`unset FASTRTPS` is now automatic — launch file handles it)
+- **Launch with `rviz:=false`** — Gazebo + RViz + camera rendering exceeds 8 GB RAM and crashes the Jetson. Launch RViz separately only when needed.
+- **Sim base motion is kinematic** (VelocityControl plugin), not physics-based. Wheel-ground friction never worked in Fortress. `/cmd_vel` directly sets model velocity.
+- **All model-level Gazebo plugins MUST be in a single `<gazebo>` block** (no `reference` attr). Fortress drops subsequent unreferenced blocks silently.
+- **Full sim operational reference:** see `../Robot_info/simulator_operations_guide.md`
+
+## Hardware/Software
+
+- 5 DOF + gripper, not 6 DOF — grasp planning must constrain to vertical approaches aligned to cube top face.
+- Arm serial = /dev/ttyUSB0, chassis = /dev/myserial (micro-ROS). Separate buses.
+- Eye-in-hand Orbbec on arm4 — every detection must do a live base_link TF lookup; camera sees nothing during grasp descent → freeze target pose from last good observation.
+- TCP = URDF link Gripping (not end_effector).
+- arm4_Joiint (double i) — MoveIt-wide typo. Do not fix. Use the typo spelling in code.
+- Stale Camera link in URDF is not a real device — kept only because MoveIt SRDF references it. Ignore.
+- Hand-eye calibration (Phase 0.6, 2026-05-04): static TF `Gripping → camera_optical_calib` published from `~/project0/launch/static_tfs.launch.py`. AX=XB residuals 13.7°/82 mm — not great, capped by open-loop joints + 5DOF + URDF tolerances. Phase 5 grasp must use vision-in-loop servoing for the final approach. Frame name is *deliberately* not `camera_color_optical_frame` because the orbbec driver already publishes that and TF allows only one parent. See `calibration/README.md` for full residual analysis and re-run instructions.
+
+## Phase 1 detector — HSV robustness
+
+- 1.2 cube_detector.py runs a dual-track pipeline: AprilTag (tag36h11 ID=3, ~19 mm edge, on one 30×30 face) preferred, HSV red fallback. Tag track is robust to angle and lighting. HSV is sensitive to shadow.
+- Operational mitigation in use (2026-05-04): mount a flashlight on the arm to guarantee adequate illumination on the cube. Eliminates the shadow-rejection failure mode entirely.
+- If the flashlight isn't available or fails, retune HSV with the cube placed in the *worst* lighting it'll see:
+  - lower `v_min` (60 → 30–40) to accept dimly-lit reds
+  - lower `s_min` (100 → 70–90) since saturation drops in shade
+  - raise `morph_kernel` (5 → 7 or 9) to fill motion-blur gaps and stabilise the contour during cube motion
+  - keep `aspect_min_x10` ≥ 14 to keep rejecting hands (their aspect is ~1.0–1.3)
+  - the tuner auto-saves on every slider move, so re-test the detector immediately without needing to quit the tuner
