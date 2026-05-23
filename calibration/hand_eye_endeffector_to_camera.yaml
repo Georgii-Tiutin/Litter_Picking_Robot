@@ -1,0 +1,20 @@
+# eye-in-hand calibration result
+# transform: endeffector (arm5/Gripping per arm_kin FK) -> camera_color_optical_frame
+# method: PARK
+# n_captures: 27
+# AX=XB residual (mean): rot=19.332 deg, trans=142.499 mm
+# AX=XB residual (median): rot=13.728 deg, trans=82.544 mm
+parent_frame: endeffector
+child_frame: camera_color_optical_frame
+translation:
+  x: -0.106538
+  y: -0.015415
+  z: -0.097122
+rotation_rpy_rad:
+  roll:  1.326384
+  pitch: -0.208860
+  yaw:   -1.343833
+rotation_matrix:
+  - [0.220130, 0.190510, -0.956686]
+  - [-0.953179, 0.250475, -0.169445]
+  - [0.207345, 0.949193, 0.236727]
