@@ -1,13 +1,7 @@
-# `calibration+detection` — Camera Calibration & Cube Detection
+# `cube-detector-v1` — Detector Integration Milestone
 
-Combines the camera/hand-eye **calibration** and the OpenCV **cube-detection** work that together feed into the "Cube detector v1" milestone. Branches off the base scaffolding.
+Integration milestone built on top of the `calibration+detection` branch — the working "Cube detector v1" snapshot.
 
-## `calibration/` — Camera & Hand-Eye Calibration
+This branch represents the full repository state at the original baseline: camera color/depth intrinsics and hand-eye calibration together with the OpenCV cube detectors and HSV tooling. It was the consolidated starting point for the project before the work was re-decomposed around the NVIDIA Jetson stack.
 
-Calibration for the eye-in-hand Orbbec DaBai DCW2 camera mounted on the M3PRO arm. Contains the color and depth camera intrinsics, the AprilTag (36h11) target used during calibration, the solved end-effector→camera hand-eye transform, the raw hand-eye capture data, and the scripts that capture samples (`capture_handeye.py`) and solve the calibration (`solve_handeye.py`), plus a bring-up helper.
-
-## `perception/` — Cube Detection (Phase-0 baseline)
-
-OpenCV color-based cube-detection — the Phase-0 perception baseline that predates the planned NVIDIA open-vocabulary stack. Holds cube detectors for blue and red cubes, HSV color-tuning tools, a scene highlighter, a robustness logger, and debug viewers, along with the HSV configuration. These are the experimental detectors developed and tuned against the live camera feed.
-
-Continues into `cube-detector-v1`.
+Branch abandoned due to a change of plans.
