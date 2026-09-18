@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Exec=/home/jetson/joy_control/joy.sh
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=joy control Starter
+Comment=Start joy control
