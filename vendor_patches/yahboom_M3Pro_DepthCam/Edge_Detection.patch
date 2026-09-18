@@ -1,0 +1,40 @@
+--- a/yahboom_M3Pro_DepthCam/Edge_Detection.py (install copy)
++++ b/yahboom_M3Pro_DepthCam/Edge_Detection.py (install copy)
+@@ -3,6 +3,7 @@
+ from sensor_msgs.msg import Image
+ from geometry_msgs.msg import Twist
+ from arm_msgs.msg import ArmJoints
++from std_msgs.msg import Int16
+ from cv_bridge import CvBridge
+ import cv2
+ import numpy as np
+@@ -21,6 +22,8 @@
+ 		self.Joy_active = False
+ 		self.depth_bridge = CvBridge()
+ 		self.move_flag = False
++		self.sub_key = self.create_subscription(Int16, "/edge_key", self.key_cb, 1)
++		self.autostart_timer = self.create_timer(3.0, self.autostart)
+ 
+ 
+ 
+@@ -53,6 +56,20 @@
+ 		cv2.imshow("frame", depth_image)		
+ 		
+ 
++	def autostart(self):
++		self.autostart_timer.cancel()
++		self.move_flag = True
++		print("AUTOSTART: moving")
++
++	def key_cb(self,msg):
++		if msg.data == 32:
++			self.move_flag = True
++			print("remote: GO")
++		else:
++			self.move_flag = False
++			self.pubVel(0,0,0)
++			print("remote: STOP")
++
+ 	def pubVel(self,vx,vy,vz):
+ 		vel = Twist()
+ 		vel.linear.x = float(vx)

@@ -1,0 +1,25 @@
+--- a/M3Pro_demo/M3Pro_demo/estimate_volume.py
++++ b/M3Pro_demo/M3Pro_demo/estimate_volume.py
+@@ -78,6 +78,9 @@
+ 		self.sub_grasp_status = self.create_subscription(Bool,"grasp_done",self.get_graspStatusCallBack,100)
+ 		self.depth_image_sub = Subscriber(self, Image, '/camera/depth/image_raw')
+ 		self.CmdVel_pub = self.create_publisher(Twist,"cmd_vel",1)
++		# remote trigger - the measurement is normally started with SPACE in the
++		# image window, which is unusable when the robot is on the floor.
++		self.sub_measure = self.create_subscription(Bool,"/measure_now",self.get_MeasureCallBack,10)
+ 		self.pub_cur_joints = self.create_publisher(CurJoints,"Curjoints",1)
+ 		self.pos_info_pub = self.create_publisher(AprilTagInfo,"PosInfo",1)
+ 		self.pub_SixTargetAngle = self.create_publisher(ArmJoints, "arm6_joints", 10)
+@@ -200,6 +203,12 @@
+ 		arm_joints.time = runtime
+ 		self.pub_SixTargetAngle.publish(arm_joints)
+ 
++	def get_MeasureCallBack(self,msg):
++		if msg.data == True:
++			self.pub_pos_flag = True
++			self.adjust_dist = True
++			print("REMOTE: measurement triggered")
++
+ 	def compute_heigh(self,x,y,z):
+ 		camera_location = self.pixel_to_camera_depth((x,y),z)
+         #print("camera_location: ",camera_location)
