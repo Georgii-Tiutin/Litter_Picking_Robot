@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """
-Color Tracking for ROSMASTER M3PRO on Jetson Orin NX.
-Adapted from Yahboom Raspbot Jupyter notebook version.
+Color Tracking for ROSMASTER M3PRO on Jetson Orin.
+Adapted from Raspberry Pi / Yahboom Raspbot version.
 
-Uses ROS2 topics for camera input and servo control.
-OpenCV GUI with clickable color buttons replaces Jupyter widgets.
-
-Prerequisites:
-  - Micro-ROS agent running (sh ~/start_agent.sh)
-  - Orbbec camera running (ros2 launch orbbec_camera dabai_dcw2.launch.py)
+Uses ROS2 topics for camera input, servo control, and RGB LED feedback.
+Requires: ros2 launch orbbec_camera dabai_dcw2.launch.py
+          sh start_agent.sh
 """
 
 import time
 import math
+import threading
 
 import numpy as np
 import cv2
@@ -24,9 +22,8 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import ColorRGBA
 from arm_msgs.msg import ArmJoint
 
-
 # ---------------------------------------------------------------------------
-# Positional PID (replaces Raspberry Pi PID module)
+# Inline Positional PID (replaces Raspberry Pi PID module)
 # ---------------------------------------------------------------------------
 class PositionalPID:
     def __init__(self, kp, ki, kd):
@@ -38,11 +35,15 @@ class PositionalPID:
         self._err = 0.0
         self._err_last = 0.0
         self._err_sum = 0.0
+        self._inertia_time = 0.0
+        self._sample_time = 0.0
 
     def SetStepSignal(self, value):
         self._step_signal = value
 
     def SetInertiaTime(self, sample_time, inertia_time):
+        self._sample_time = sample_time
+        self._inertia_time = inertia_time
         self._err = self._step_signal - self.SystemOutput
         self._err_sum += self._err
         output = (self.Kp * self._err
@@ -56,17 +57,15 @@ class PositionalPID:
 # ROS2 Color Tracking Node
 # ---------------------------------------------------------------------------
 class ColorTrackingNode(Node):
-
-    # HSV thresholds (same as Pi version)
+    # Default HSV thresholds (red)
     COLOR_PRESETS = {
-        'red':    (np.array([0,   43,  89]), np.array([7,   255, 255])),
-        'green':  (np.array([54, 104,  64]), np.array([78,  255, 255])),
-        'blue':   (np.array([92,  80,  60]), np.array([124, 255, 255])),
-        'yellow': (np.array([26, 100,  91]), np.array([32,  255, 255])),
-        'orange': (np.array([11,  43,  46]), np.array([25,  255, 255])),
+        'red':    (np.array([0,  43,  89]), np.array([7,   255, 255])),
+        'green':  (np.array([54, 104, 64]), np.array([78,  255, 255])),
+        'blue':   (np.array([92,  80, 60]), np.array([124, 255, 255])),
+        'yellow': (np.array([26, 100, 91]), np.array([32,  255, 255])),
+        'orange': (np.array([11,  43, 46]), np.array([25,  255, 255])),
     }
 
-    # RGB LED values (for /rgb topic — requires custom firmware subscriber)
     RGB_VALUES = {
         'red':    (1.0, 0.0, 0.0),
         'green':  (0.0, 1.0, 0.0),
@@ -75,22 +74,18 @@ class ColorTrackingNode(Node):
         'orange': (1.0, 0.19, 0.0),
     }
 
-    # --- M3PRO servo mapping ---
-    # Pi: bot.Ctrl_Servo(1, angle) → Joint 1 (pan)
-    # Pi: bot.Ctrl_Servo(2, angle) → Joint 4 (tilt) on M3PRO
-    PAN_SERVO_ID = 1
-    TILT_SERVO_ID = 4
-    SERVO_TIME_MS = 100
+    # Servo IDs on M3PRO arm
+    PAN_SERVO_ID = 1   # Joint 1: base rotation (horizontal)
+    TILT_SERVO_ID = 4  # Joint 4: wrist pitch (vertical)
+    SERVO_TIME_MS = 100  # Movement duration per command (fast tracking)
 
+    # Servo limits (degrees)
     PAN_MIN = 0
     PAN_MAX = 180
-    PAN_CENTER = 90
-
     TILT_MIN = 0
-    TILT_MAX = 100   # Pi used 100 as max in Color_Recognize2
-    TILT_CENTER = 55
+    TILT_MAX = 110
 
-    # Image dimensions
+    # Image dimensions (expected from Orbbec camera)
     IMG_W = 640
     IMG_H = 480
 
@@ -102,7 +97,7 @@ class ColorTrackingNode(Node):
         ('blue',   (255, 0, 0)),
         ('yellow', (0, 255, 255)),
         ('orange', (0, 120, 255)),
-        ('close',  (128, 128, 128)),
+        ('stop',   (128, 128, 128)),
     ]
 
     def __init__(self):
@@ -112,28 +107,27 @@ class ColorTrackingNode(Node):
         self.pub_servo = self.create_publisher(ArmJoint, '/arm_joint', 1)
         self.pub_rgb = self.create_publisher(ColorRGBA, '/rgb', 1)
 
-        # --- Camera subscriber ---
+        # --- Subscriber (camera) ---
         self.bridge = CvBridge()
         self.frame = None
         self.sub_image = self.create_subscription(
             Image, '/camera/color/image_raw', self._image_callback, 1)
 
-        # --- Tracking state ---
-        # Pi globals: g_mode, color_lower, color_upper, color_x, color_y, etc.
-        self.g_mode = 0  # 0 = off, 1 = tracking
-        self.active_color = None
+        # --- State ---
         self.color_lower = self.COLOR_PRESETS['red'][0]
         self.color_upper = self.COLOR_PRESETS['red'][1]
+        self.tracking = False
+        self.active_color = None
 
         self.color_x = 0.0
         self.color_y = 0.0
         self.color_radius = 0.0
 
-        # Pi globals: target_valuex, target_valuey (PWM-style, 500-2500 range)
-        self.target_valuex = 1500
-        self.target_valuey = 1500
+        # Current servo positions (start centered)
+        self.pan_angle = 90.0
+        self.tilt_angle = 55.0  # Midpoint of 0–110
 
-        # --- PID controllers (same gains as Pi) ---
+        # --- PID controllers ---
         self.xservo_pid = PositionalPID(0.8, 0.2, 0.01)
         self.yservo_pid = PositionalPID(0.8, 0.2, 0.01)
 
@@ -141,9 +135,9 @@ class ColorTrackingNode(Node):
         self.t_start = time.time()
         self.frame_count = 0
 
-        # --- Send servos to center (Pi: bot.Ctrl_Servo(1,90), bot.Ctrl_Servo(2,25)) ---
-        self._send_servo(self.PAN_SERVO_ID, self.PAN_CENTER)
-        self._send_servo(self.TILT_SERVO_ID, self.TILT_CENTER)
+        # Send servos to initial position
+        self._send_servo(self.PAN_SERVO_ID, int(self.pan_angle))
+        self._send_servo(self.TILT_SERVO_ID, int(self.tilt_angle))
 
         # --- GUI setup ---
         self._win_name = 'Color Tracking'
@@ -170,57 +164,29 @@ class ColorTrackingNode(Node):
     def _on_mouse(self, event, x, y, flags, param):
         if event != cv2.EVENT_LBUTTONDOWN:
             return
+        # Check if click is in the button panel area (below camera frame)
         if y < self.IMG_H:
             return
         for name, _bgr, x1, x2 in self._buttons:
             if x1 <= x < x2:
-                if name == 'close':
-                    self._on_close()
+                if name == 'stop':
+                    self.select_color('none')
                 else:
-                    self._on_color_selected(name)
+                    self.select_color(name)
                 break
 
     # ------------------------------------------------------------------
-    # Button handlers (adapted from Pi on_*button_clicked callbacks)
-    # ------------------------------------------------------------------
-    def _on_color_selected(self, color_name):
-        """Equivalent to Pi's on_Redbutton_clicked, on_Greenbutton_clicked, etc."""
-        self.color_lower, self.color_upper = self.COLOR_PRESETS[color_name]
-        self.g_mode = 1
-        self.active_color = color_name
-
-        # RGB LED feedback (Pi: bot.Ctrl_WQ2812_ALL(...))
-        r, g, b = self.RGB_VALUES[color_name]
-        self._send_rgb(r, g, b)
-
-        self.get_logger().info(f'Tracking color: {color_name}')
-
-    def _on_close(self):
-        """Equivalent to Pi's on_Closebutton_clicked."""
-        self.g_mode = 0
-        self.active_color = None
-
-        # Turn off LEDs (Pi: bot.Ctrl_WQ2812_ALL(0, 0))
-        self._send_rgb(0.0, 0.0, 0.0)
-
-        # Reset servos to center (Pi: bot.Ctrl_Servo(1, 90), bot.Ctrl_Servo(2, 25))
-        self._send_servo(self.PAN_SERVO_ID, self.PAN_CENTER)
-        self._send_servo(self.TILT_SERVO_ID, self.TILT_CENTER)
-
-        self.get_logger().info('Tracking stopped.')
-
-    # ------------------------------------------------------------------
-    # Draw button panel
+    # Draw button panel onto canvas
     # ------------------------------------------------------------------
     def _draw_buttons(self, canvas):
         y_top = self.IMG_H
         for name, bgr, x1, x2 in self._buttons:
+            # Fill button
             cv2.rectangle(canvas, (x1, y_top), (x2, y_top + self.BUTTON_H), bgr, -1)
-            # Highlight active
+            # Highlight active button
             if name == self.active_color:
                 cv2.rectangle(canvas, (x1 + 2, y_top + 2),
-                              (x2 - 2, y_top + self.BUTTON_H - 2),
-                              (255, 255, 255), 3)
+                              (x2 - 2, y_top + self.BUTTON_H - 2), (255, 255, 255), 3)
             # Label
             label = name.upper()
             sz = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
@@ -236,7 +202,7 @@ class ColorTrackingNode(Node):
         self.frame = self.bridge.imgmsg_to_cv2(msg, 'bgr8')
 
     # ------------------------------------------------------------------
-    # Servo helper (replaces Pi's bot.Ctrl_Servo)
+    # Servo helper
     # ------------------------------------------------------------------
     def _send_servo(self, servo_id, angle):
         msg = ArmJoint()
@@ -246,7 +212,7 @@ class ColorTrackingNode(Node):
         self.pub_servo.publish(msg)
 
     # ------------------------------------------------------------------
-    # RGB helper (replaces Pi's bot.Ctrl_WQ2812_ALL)
+    # RGB helper
     # ------------------------------------------------------------------
     def _send_rgb(self, r, g, b):
         msg = ColorRGBA()
@@ -257,7 +223,35 @@ class ColorTrackingNode(Node):
         self.pub_rgb.publish(msg)
 
     # ------------------------------------------------------------------
-    # Main processing loop (30 Hz timer, replaces Pi's while True loop)
+    # Select tracking color
+    # ------------------------------------------------------------------
+    def select_color(self, color_name):
+        """Switch tracked color. Valid: red, green, blue, yellow, orange, none."""
+        if color_name == 'none':
+            self.tracking = False
+            self.active_color = None
+            self._send_rgb(0.0, 0.0, 0.0)
+            # Reset servos to center
+            self.pan_angle = 90.0
+            self.tilt_angle = 55.0
+            self._send_servo(self.PAN_SERVO_ID, int(self.pan_angle))
+            self._send_servo(self.TILT_SERVO_ID, int(self.tilt_angle))
+            self.get_logger().info('Tracking stopped.')
+            return
+
+        if color_name not in self.COLOR_PRESETS:
+            self.get_logger().warn(f'Unknown color: {color_name}')
+            return
+
+        self.color_lower, self.color_upper = self.COLOR_PRESETS[color_name]
+        r, g, b = self.RGB_VALUES[color_name]
+        self._send_rgb(r, g, b)
+        self.tracking = True
+        self.active_color = color_name
+        self.get_logger().info(f'Tracking color: {color_name}')
+
+    # ------------------------------------------------------------------
+    # Main processing loop (called by timer)
     # ------------------------------------------------------------------
     def _process(self):
         if self.frame is None:
@@ -265,7 +259,7 @@ class ColorTrackingNode(Node):
 
         frame = self.frame.copy()
 
-        if self.g_mode == 1:
+        if self.tracking:
             self._track_color(frame)
 
         # FPS overlay
@@ -273,9 +267,9 @@ class ColorTrackingNode(Node):
         elapsed = time.time() - self.t_start
         fps = self.frame_count / elapsed if elapsed > 0 else 0
         cv2.putText(frame, f'FPS {int(fps)}', (40, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 3)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
-        # Build canvas with button panel
+        # Build canvas: camera frame + button panel
         canvas = np.zeros((self.IMG_H + self.BUTTON_H, self.IMG_W, 3), dtype=np.uint8)
         canvas[:self.IMG_H, :, :] = frame
         self._draw_buttons(canvas)
@@ -283,25 +277,25 @@ class ColorTrackingNode(Node):
         cv2.imshow(self._win_name, canvas)
         key = cv2.waitKey(1) & 0xFF
 
-        # Keyboard shortcuts (same as Pi key concept)
+        # Keyboard color selection (still works)
         if key == ord('r'):
-            self._on_color_selected('red')
+            self.select_color('red')
         elif key == ord('g'):
-            self._on_color_selected('green')
+            self.select_color('green')
         elif key == ord('b'):
-            self._on_color_selected('blue')
+            self.select_color('blue')
         elif key == ord('y'):
-            self._on_color_selected('yellow')
+            self.select_color('yellow')
         elif key == ord('o'):
-            self._on_color_selected('orange')
-        elif key == ord('c') or key == 27:
-            self._on_close()
+            self.select_color('orange')
+        elif key == ord('c') or key == 27:  # 'c' or ESC
+            self.select_color('none')
         elif key == ord('q'):
             self.get_logger().info('Quit requested.')
             rclpy.shutdown()
 
     # ------------------------------------------------------------------
-    # Color tracking (ported from Pi's Color_Recognize2 with deadzone)
+    # Color tracking logic (adapted from Color_Recognize2 with deadzone)
     # ------------------------------------------------------------------
     def _track_color(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -326,42 +320,39 @@ class ColorTrackingNode(Node):
         cv2.circle(frame, (int(self.color_x), int(self.color_y)),
                    int(self.color_radius), (255, 0, 255), 2)
 
-        # --- X axis PID with deadzone ---
-        # Pi: SetStepSignal(250) with 640px image → target pixel ~250
-        # Pi: target_valuex = 1600 + PID_output → servo = (target_valuex - 500) / 10
-        # Adapted: use image center (320) as step signal
-        if math.fabs(self.IMG_W / 2.0 - self.color_x) > 20:
-            self.xservo_pid.SystemOutput = self.color_x
-            self.xservo_pid.SetStepSignal(self.IMG_W / 2.0)
+        # Image center
+        cx = self.IMG_W / 2.0  # 320
+        cy = self.IMG_H / 2.0  # 240
+
+        # --- Pan (X axis) with deadzone ---
+        error_x = self.color_x - cx
+        if math.fabs(error_x) > 20:
+            self.xservo_pid.SystemOutput = error_x
+            self.xservo_pid.SetStepSignal(0)
             self.xservo_pid.SetInertiaTime(0.01, 0.05)
 
-            # Pi formula: servo = (1600 + pid_output - 500) / 10 = 110 + pid_output/10
-            # For M3PRO: map similarly, centering around PAN_CENTER (90)
-            target_valuex = int(1400 + self.xservo_pid.SystemOutput)
-            target_servox = int((target_valuex - 500) / 10)
-            target_servox = max(self.PAN_MIN, min(self.PAN_MAX, target_servox))
+            # Negative because: object is right of center → servo should pan right
+            # (decreasing angle on M3PRO joint 1 rotates right)
+            self.pan_angle -= self.xservo_pid.SystemOutput * 0.05
+            self.pan_angle = max(self.PAN_MIN, min(self.PAN_MAX, self.pan_angle))
+            self._send_servo(self.PAN_SERVO_ID, int(self.pan_angle))
 
-            self._send_servo(self.PAN_SERVO_ID, target_servox)
-
-        # --- Y axis PID with deadzone ---
-        # Pi: SetStepSignal(200), target_valuey = 1150 + PID_output
-        # Pi deadzone: math.fabs(180 - color_y) > 75
-        if math.fabs(self.IMG_H / 2.0 - self.color_y) > 75:
-            self.yservo_pid.SystemOutput = self.color_y
-            self.yservo_pid.SetStepSignal(self.IMG_H / 2.0)
+        # --- Tilt (Y axis) with deadzone ---
+        error_y = self.color_y - cy
+        if math.fabs(error_y) > 20:
+            self.yservo_pid.SystemOutput = error_y
+            self.yservo_pid.SetStepSignal(0)
             self.yservo_pid.SetInertiaTime(0.01, 0.1)
 
-            # Pi formula: servo = (1150 + pid_output - 500) / 10 = 65 + pid_output/10
-            target_valuey = int(1050 + self.yservo_pid.SystemOutput)
-            target_servoy = int((target_valuey - 500) / 10)
-            target_servoy = max(self.TILT_MIN, min(self.TILT_MAX, target_servoy))
-
-            self._send_servo(self.TILT_SERVO_ID, target_servoy)
+            # Positive error_y means object is below center → tilt down
+            self.tilt_angle += self.yservo_pid.SystemOutput * 0.03
+            self.tilt_angle = max(self.TILT_MIN, min(self.TILT_MAX, self.tilt_angle))
+            self._send_servo(self.TILT_SERVO_ID, int(self.tilt_angle))
 
         # Debug overlay
-        cv2.putText(frame, f'x:{int(self.color_x)} pan:{int((1400 + self.xservo_pid.SystemOutput - 500) / 10)}',
+        cv2.putText(frame, f'x:{int(self.color_x)} pan:{int(self.pan_angle)}',
                     (40, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-        cv2.putText(frame, f'y:{int(self.color_y)} tilt:{int((1050 + self.yservo_pid.SystemOutput - 500) / 10)}',
+        cv2.putText(frame, f'y:{int(self.color_y)} tilt:{int(self.tilt_angle)}',
                     (40, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
 
@@ -372,10 +363,10 @@ def main():
     rclpy.init()
     node = ColorTrackingNode()
 
-    print('\n--- Color Tracking (Jetson Orin NX / M3PRO) ---')
-    print('Click color buttons or use keys: r g b y o c q')
+    print('\n--- Color Tracking (Jetson Orin / M3PRO) ---')
+    print('Keys: r=red  g=green  b=blue  y=yellow  o=orange  c=close  q=quit')
     print('Prerequisites:')
-    print('  sh ~/start_agent.sh')
+    print('  sh start_agent.sh')
     print('  ros2 launch orbbec_camera dabai_dcw2.launch.py\n')
 
     try:
@@ -383,7 +374,8 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
-        node._on_close()
+        # Reset servos and turn off LEDs
+        node.select_color('none')
         time.sleep(0.2)
         node.destroy_node()
         cv2.destroyAllWindows()
