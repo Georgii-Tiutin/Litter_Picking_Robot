@@ -10,6 +10,7 @@ The learned replacement for the HSV cube detectors on `calibration+detection`. A
   - `dataset/`, `dataset_clean/` — YOLO labels and `data.yaml` (original labels and the cleaned version)
   - `synth/` — synthetic data generator (Blender scene and room renders), label conversion and label-gap tools, the converted room labels and the generation logs
   - `runs/` — **every** training and validation run, kept as-is, including the ones that did worse
+- `robot_eval/` — scripts and detection logs from running the models live on the robot (Jetson): `baseline/` is the first on-robot test of `cuboid_v1`, `compare/` runs all three models on the same camera feed side by side (the test that showed `v3_clean` failing)
 - `models/` — the candidate models picked for the robot, with a model card
 
 ## Runs
@@ -20,7 +21,7 @@ Peak validation mAP50 from each run's `results.csv`:
 | `cuboid_v1` | real only | 35 | 0.566 | Baseline. **Most reliable on the robot** (`cuboid_best_baseline.pt`); weak on dark surfaces |
 | `cuboid_v2_mix` | real + ~2000 synth, trained together | 49 | 0.572 peak, 0.542 for the saved best | Did **not** beat real-only; synth swamped the real data |
 | `cuboid_v3_clean` | real only, cleaned labels | 42 | 0.661 | **Failed on the robot**: highest offline score, but barely detected anything live. The val labels were model-assisted, so the score was circular |
-| `cuboid_v3_synthpre` | synth rooms pretraining | 5 | 0.535 | Stage 1 of two-stage; the fine-tuned result is `cuboid_twostage_rooms.pt`: better recall on the robot but jittery. The fine-tune run folder (`cuboid_v3_finetune`) was not in the local folder, only the model |
+| `cuboid_v3_synthpre` | synth rooms pretraining | 5 | 0.535 | Stage 1 of two-stage; the fine-tuned result is `cuboid_twostage_rooms.pt`: better recall on the robot but jittery. |
 
 `runs/detect/` holds the side-by-side validation runs (`cmp_twostage`, `cmp_v3clean`, `v2_val`, `val*`).
 
