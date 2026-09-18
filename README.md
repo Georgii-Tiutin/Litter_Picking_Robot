@@ -13,4 +13,4 @@ The actual modules live on dedicated branches:
 - **`navigation`** — LiDAR mapping / navigation plan and the arm-sweep floor-mapping scripts
 - **`arm-grasping`** — cuboid pose detection, wrist alignment, drive-up and grasp scripts, with the grasp plan and the record of what worked on the robot
 
-`PROJECT_PLAN.md` is the cuboid detection and grasping plan. `DATA_MANIFEST.md` lists the datasets, renders and videos that are kept locally rather than on GitHub.
+`PROJECT_PLAN.md` is the cuboid detection and grasping plan. `tools/` has the battery-check and arm-calibration utilities. `DATA_MANIFEST.md` lists the datasets, renders and videos that are kept locally rather than on GitHub.

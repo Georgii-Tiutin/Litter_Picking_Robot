@@ -35,7 +35,14 @@
       "Bash(md5 /Users/georgiitiutin/Documents/Projects/Project0/perception/scripts/cube_detector_v1.py)",
       "Bash(gh auth *)",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" https://api.github.com/repos/Georgii-Tiutin/Computer_vision)",
+      "Bash(gh --version)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" https://github.com/Georgii-Tiutin/Litter_Picking_Robot)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" https://api.github.com/repos/Georgii-Tiutin/Litter_Picking_Robot)",
+      "Read(//Users/georgiitiutin/Documents/Projects/robotdoc/ROSMASTER-M3PRO-DOCS-MD/**)"
     ]
   },
   "plansDirectory": ".claude/plans"
