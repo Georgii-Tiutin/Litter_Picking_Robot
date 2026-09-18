@@ -6,7 +6,11 @@ This branch deliberately holds the project **scaffolding and planning documents*
 
 The actual modules live on dedicated branches:
 
-- **`calibration`** — camera intrinsics + hand-eye calibration
-- **`perception`** — OpenCV cube detectors (Phase-0 baseline)
+- **`calibration+detection`** — camera intrinsics, hand-eye + AprilTag calibration, OpenCV/HSV cube detectors
+- **`cube-detector-v1`** — the calibration + detection milestone (cube detector v1)
 - **`color-tracking`** — standalone Orin color-tracking script
-- **`cube-detector-v1`** — historical merge of `calibration` + `perception`
+- **`yolo-detector`** — YOLO11n cuboid detector: training scripts, synthetic-data generator, every training run (including the ones that did worse) and the candidate models
+- **`navigation`** — LiDAR mapping / navigation plan and the arm-sweep floor-mapping scripts
+- **`arm-grasping`** — cuboid pose detection, wrist alignment, drive-up and grasp scripts, with the grasp plan and the record of what worked on the robot
+
+`PROJECT_PLAN.md` is the cuboid detection and grasping plan. `DATA_MANIFEST.md` lists the datasets, renders and videos that are kept locally rather than on GitHub.
