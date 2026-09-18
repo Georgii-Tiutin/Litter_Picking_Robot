@@ -1,0 +1,32 @@
+--- a/M3Pro_demo/M3Pro_demo/apriltag_detect.py
++++ b/M3Pro_demo/M3Pro_demo/apriltag_detect.py
+@@ -45,11 +45,12 @@
+ 		self.rgb_bridge = CvBridge()
+ 		self.depth_bridge = CvBridge()
+ 		self.pubPos_flag = False
++		self.sub_key = self.create_subscription(Int16, "/apriltag_key", self.key_cb, 1)
+ 		self.pr_time = time.time()
+ 		self.at_detector = Detector(searchpath=['apriltags'], 
+                                     families='tag36h11',
+                                     nthreads=8,
+-                                    quad_decimate=2.0,
++                                    quad_decimate=1.0,
+                                     quad_sigma=0.0,
+                                     refine_edges=1,
+                                     decode_sharpening=0.25,
+@@ -101,6 +102,15 @@
+ 
+         
+ 
++	def key_cb(self,msg):
++		if msg.data == 32:
++			self.pubPos_flag = True
++			print("remote: GRASP")
++		else:
++			self.pubPos_flag = False
++			self.pubVel(0,0,0)
++			print("remote: STOP")
++
+ 	def pubCurrentJoints(self):
+ 		cur_joints = CurJoints()
+ 		cur_joints.joints = self.init_joints

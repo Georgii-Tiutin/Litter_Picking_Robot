@@ -1,0 +1,39 @@
+--- a/M3Pro_demo/M3Pro_demo/grasp.py
++++ b/M3Pro_demo/M3Pro_demo/grasp.py
+@@ -30,7 +30,7 @@
+ 		#self.init_joints = [90, 90, 12, 20, 90, 0] #follow_line
+ 		#self.init_joints = [90, 100, 0, 0, 90, 0] #shape_recognize
+ 		#self.init_joints = [90, 120, 0, 0, 90, 90]
+-		self.down_joint = [180, 90, 12, 20, 90, 57]
++		self.down_joint = [180, 90, 12, 20, 90, 120]
+ 		self.gripper_joint = 90
+ 		self.CurEndPos = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+ 		self.camera_info_K = [477.57421875, 0.0, 319.3820495605469, 0.0, 477.55718994140625, 238.64108276367188, 0.0, 0.0, 1.0]
+@@ -46,6 +46,7 @@
+ 		self.pubGraspStatus = self.create_publisher(Bool,"grasp_done",1)
+ 		self.client = self.create_client(ArmKinemarics, 'get_kinemarics')
+ 		self.sub_joint5 = self.create_subscription(Int16,"set_joint5",self.get_joint5_callback,1)
++		self.sub_joint6 = self.create_subscription(Int16,"set_joint6",self.get_joint6_callback,1)
+ 		self.sub_cur_joints = self.create_subscription(CurJoints,"Curjoints",self.get_cur_joint_callback,1)			 
+ 		print('init done')
+ 		self.cur_joints = self.init_joints
+@@ -63,6 +64,10 @@
+ 		self.cur_joints = msg.joints
+ 		self.get_current_end_pos()
+ 
++	def get_joint6_callback(self,msg):
++		self.joint6 = msg.data
++		print("get joint6 = ", msg.data)
++
+ 	def get_joint5_callback(self,msg):
+ 		self.gripper_joint = msg.data
+ 		print("get joint5 = ",msg.data)
+@@ -202,6 +207,8 @@
+ 			self.down_joint = [28, 30, 70, 2, 90,self.joint6]
+ 		elif self.cur_tagId == 4:
+ 			self.down_joint = [0, 43, 48, 6, 90,self.joint6]
++		else:
++			self.down_joint = [180, 90, 12, 20, 90, self.joint6]
+ 		self.pubSixArm(self.down_joint)
+ 		time.sleep(2.5)
+ 		self.pubSingleArm(6, 30, 2000)

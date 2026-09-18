@@ -1,0 +1,28 @@
+--- a/M3Pro_demo/M3Pro_demo/color_recognize.py
++++ b/M3Pro_demo/M3Pro_demo/color_recognize.py
+@@ -83,6 +83,8 @@
+ 		self.linearx_PID = (0.5, 0.0, 0.2)
+ 		self.linearx_pid = simplePID(self.linearx_PID[0] / 1000.0, self.linearx_PID[1] / 1000.0, self.linearx_PID[2] / 1000.0)
+ 		self.target_color = 0
++		self.sub_tcolor = self.create_subscription(Int16, "/target_color", self.tcolor_cb, 1)
++		self.sub_ckey = self.create_subscription(Int16, "/color_key", self.ckey_cb, 1)
+ 		self.red_hsv_text = os.path.join(package_pwd, 'red_colorHSV.text')
+ 		self.green_hsv_text = os.path.join(package_pwd, 'green_colorHSV.text')
+ 		self.blue_hsv_text = os.path.join(package_pwd, 'blue_colorHSV.text')
+@@ -153,6 +155,16 @@
+ 			self.valid_dist = True
+ 			
+ 			
++	def tcolor_cb(self,msg):
++		self.target_color = msg.data
++		self.cur_target_color = msg.data
++		print("remote: target_color =", msg.data)
++
++	def ckey_cb(self,msg):
++		if msg.data == 32:
++			self.adjust_dist = True
++			print("remote: GRASP")
++
+ 	def pubCurrentJoints(self):
+ 		cur_joints = CurJoints()
+ 		cur_joints.joints = self.init_joints

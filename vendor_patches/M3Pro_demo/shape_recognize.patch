@@ -1,0 +1,37 @@
+--- a/M3Pro_demo/M3Pro_demo/shape_recognize.py
++++ b/M3Pro_demo/M3Pro_demo/shape_recognize.py
+@@ -7,7 +7,7 @@
+ from arm_interface.srv import ArmKinemarics
+ from arm_interface.msg import AprilTagInfo,CurJoints
+ from arm_msgs.msg import ArmJoints
+-from std_msgs.msg import Float32,Bool,Int16
++from std_msgs.msg import Float32,Bool,Int16,String
+ import time
+ import transforms3d as tfs
+ import tf_transformations as tf
+@@ -71,6 +71,8 @@
+ 		self.ts = ApproximateTimeSynchronizer([self.rgb_image_sub, self.depth_image_sub], 1, 0.5)
+ 		self.ts.registerCallback(self.callback)
+ 		self.Target_Shape = "Cylinder" #Rectangle  Square  Cylinder
++		self.sub_shape = self.create_subscription(String, "/target_shape", self.shape_cb, 1)
++		self.sub_skey = self.create_subscription(Int16, "/shape_key", self.skey_cb, 1)
+ 		self.x_offset = offset_config.get('x_offset')
+ 		self.y_offset = offset_config.get('y_offset')
+ 		self.z_offset = offset_config.get('z_offset')
+@@ -122,6 +124,16 @@
+ 			self.pub_pos_flag = True
+ 			self.Target_Shape = input("Please enter a target shape, which can be selected from Rectangle  Square  Cylinder：" )
+ 			
++	def shape_cb(self,msg):
++		self.Target_Shape = msg.data
++		print("remote: Target_Shape =", msg.data)
++
++	def skey_cb(self,msg):
++		if msg.data == 32:
++			self.pub_pos_flag = True
++			self.adjust_dist = True
++			print("remote: GRASP")
++
+ 	def pubCurrentJoints(self):
+ 		cur_joints = CurJoints()
+ 		cur_joints.joints = self.init_joints

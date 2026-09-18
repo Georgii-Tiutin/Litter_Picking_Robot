@@ -1,0 +1,22 @@
+--- a/M3Pro_demo/M3Pro_demo/color_follow.py
++++ b/M3Pro_demo/M3Pro_demo/color_follow.py
+@@ -91,6 +91,7 @@
+ 		self.grasp_Dist = 260.0
+ 		self.done_flag = True
+ 		self.target_color = 0
++		self.sub_tcolor = self.create_subscription(Int16, "/target_color", self.tcolor_cb, 1)
+ 		self.red_hsv_text = os.path.join(package_pwd, 'red_colorHSV.text')
+ 		self.green_hsv_text = os.path.join(package_pwd, 'green_colorHSV.text')
+ 		self.blue_hsv_text = os.path.join(package_pwd, 'blue_colorHSV.text')
+@@ -174,6 +175,11 @@
+ 			self.Done_flag = True
+ 			self.Reset()
+ 			
++	def tcolor_cb(self,msg):
++		self.target_color = msg.data
++		self.cur_target_color = msg.data
++		print("remote: target_color =", msg.data)
++
+ 	def pubCurrentJoints(self):
+ 		cur_joints = CurJoints()
+ 		cur_joints.joints = self.cur_joints
