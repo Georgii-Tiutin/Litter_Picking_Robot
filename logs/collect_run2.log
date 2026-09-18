@@ -1,0 +1,25 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+6 floor cube(s) to collect; drop zone at (-1.275,+0.425)
+
+=== [1/6] cube #1 at (+0.26,-0.08)  batt ? ===
+   approach: SUCCEEDED
+   could not get a reliable look (map transform kept dropping) - leaving as pending rather than calling it false
+
+=== [2/6] cube #5 at (+0.31,-0.22)  batt 12.02 V ===
+   localisation: scan-to-map median miss 0.057 m -> ok
+   already 0.072 m from the approach pose - turning 8 deg in place
+   could not get a reliable look (map transform kept dropping) - leaving as pending rather than calling it false
+
+=== [3/6] cube #4 at (+0.12,+0.89)  batt 11.99 V ===
+   localisation: scan-to-map median miss 0.064 m -> ok
+   approach: STUCK
+   could not reach it - leaving as pending
+
+=== [4/6] cube #2 at (-0.70,-0.47)  batt 11.99 V ===
+   localisation: scan-to-map median miss 0.076 m -> ok
+   approach: ABORTED
+   could not reach it - leaving as pending
+
+=== [5/6] cube #3 at (-0.96,-1.36)  batt 11.92 V ===
+   localisation: scan-to-map median miss 0.030 m -> ok

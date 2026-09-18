@@ -1,0 +1,71 @@
+--- a/param/yahboom_M3Pro.yaml
++++ b/param/yahboom_M3Pro.yaml
+@@ -31,7 +31,7 @@
+     sigma_hit: 0.2
+     tf_broadcast: true
+     tf_publish_rate: 10.0
+-    transform_tolerance: 0.2
++    transform_tolerance: 0.5
+     update_min_a: 0.2
+     update_min_d: 0.25
+     z_hit: 0.5
+@@ -199,12 +199,12 @@
+           data_type: PointCloud2
+           marking: true
+           clearing: true
+-          min_obstacle_height: 0.03
++          min_obstacle_height: 0.02
+           max_obstacle_height: 0.6
+           obstacle_max_range: 1.2
+           obstacle_min_range: 0.0
+           raytrace_max_range: 1.5
+-          raytrace_min_range: 0.0
++          raytrace_min_range: 0.45
+       voxel_layer:
+         plugin: nav2_costmap_2d::VoxelLayer
+         enabled: false
+@@ -230,12 +230,12 @@
+           data_type: PointCloud2
+           marking: true
+           clearing: true
+-          min_obstacle_height: 0.03
++          min_obstacle_height: 0.02
+           max_obstacle_height: 0.6
+           obstacle_max_range: 1.2
+           obstacle_min_range: 0.0
+           raytrace_max_range: 1.5
+-          raytrace_min_range: 0.0
++          raytrace_min_range: 0.45
+       static_layer:
+         map_subscribe_transient_local: true
+       always_send_full_costmap: true
+@@ -280,12 +280,12 @@
+           data_type: PointCloud2
+           marking: true
+           clearing: true
+-          min_obstacle_height: 0.03
++          min_obstacle_height: 0.02
+           max_obstacle_height: 0.6
+           obstacle_max_range: 1.2
+           obstacle_min_range: 0.0
+           raytrace_max_range: 1.5
+-          raytrace_min_range: 0.0
++          raytrace_min_range: 0.45
+       voxel_layer:
+         plugin: nav2_costmap_2d::VoxelLayer
+         enabled: false
+@@ -311,12 +311,12 @@
+           data_type: PointCloud2
+           marking: true
+           clearing: true
+-          min_obstacle_height: 0.03
++          min_obstacle_height: 0.02
+           max_obstacle_height: 0.6
+           obstacle_max_range: 1.2
+           obstacle_min_range: 0.0
+           raytrace_max_range: 1.5
+-          raytrace_min_range: 0.0
++          raytrace_min_range: 0.45
+       static_layer:
+         plugin: nav2_costmap_2d::StaticLayer
+         map_subscribe_transient_local: true

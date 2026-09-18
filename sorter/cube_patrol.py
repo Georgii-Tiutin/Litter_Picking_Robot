@@ -39,6 +39,11 @@ K          = [477.57421875, 0.0, 319.3820495605469,
 CONF       = 0.25
 DEPTH_MM   = True          # this driver publishes 32FC1 in MILLIMETRES (see vision_view.py)
 
+FLOOR_PROJECT = True          # locate a cube by intersecting the ray through the BOTTOM of
+                              # its box with the floor plane z=0, instead of trusting the depth
+                              # median. A cube sits on the floor, so that intersection is fully
+                              # determined by the camera pose and the pixel - no depth noise,
+                              # which was scattering repeat sightings of one cube over >0.4 m.
 H_MIN,H_MAX   = -0.03, 0.20   # a cuboid on the floor. Generous on purpose: the box centre
                               # lands near the cube's BASE, not its top, so a real cube can
                               # compute to ~0.006 m (measured). The gate exists to reject
@@ -90,8 +95,15 @@ class CubePatrol(Node):
         self.model=YOLO(MODEL)
         self.cubes=[]          # [x, y, z, n_sightings, best_conf]
 
-    def cb_rgb(self,m): self.rgb=self.b.imgmsg_to_cv2(m,"bgr8")
+    def cb_rgb(self,m): self._cb_rgb(m)
     def cb_d(self,m):   self.depth=self.b.imgmsg_to_cv2(m,"32FC1").astype(np.float32)
+
+    def _cb_rgb(self,m):
+        # Keep the CAPTURE TIME with the image. Transforming a detection with the LATEST
+        # transform instead of the one for the shutter instant silently bakes every bit of
+        # motion between capture and processing into the cube's position.
+        self.rgb=self.b.imgmsg_to_cv2(m,"bgr8")
+        self.rgb_stamp=m.header.stamp
 
     def spin(self,s):
         t=self.get_clock().now()
@@ -196,9 +208,16 @@ class CubePatrol(Node):
         if self.rgb is None or self.depth is None: return []
         rgb=self.rgb.copy(); dep=self.depth.copy()
         try:
-            tr=self.tfbuf.lookup_transform("map","camera_color_optical_frame",
-                                           rclpy.time.Time()).transform
-        except Exception: return []
+            stamp=getattr(self,"rgb_stamp",None)
+            t_q=rclpy.time.Time.from_msg(stamp) if stamp is not None else rclpy.time.Time()
+            tr=self.tfbuf.lookup_transform("map","camera_color_optical_frame",t_q).transform
+        except Exception:
+            # capture-time transform unavailable; fall back to latest rather than dropping
+            # the frame, but that bakes in any motion since the shutter fired
+            try:
+                tr=self.tfbuf.lookup_transform("map","camera_color_optical_frame",
+                                               rclpy.time.Time()).transform
+            except Exception: return []
         q=tr.rotation
         T=tfs.affines.compose([tr.translation.x,tr.translation.y,tr.translation.z],
                               tfs.quaternions.quat2mat([q.w,q.x,q.y,q.z]),[1,1,1])
@@ -219,6 +238,19 @@ class CubePatrol(Node):
             P=np.array([(u-cx0)*z/fx,(v-cy0)*z/fy,z,1.0])
             W=(T@P)[:3]
             if not (H_MIN<W[2]<H_MAX): continue     # must be sitting on the floor
+            if FLOOR_PROJECT:
+                # ray through the BOTTOM-centre of the box, in camera coords, then to map
+                vb=float(y2)
+                dir_cam=np.array([(u-cx0)/fx,(vb-cy0)/fy,1.0,0.0])
+                Cw=(T@np.array([0.0,0.0,0.0,1.0]))[:3]      # camera origin in map
+                dw=(T@dir_cam)[:3]
+                if abs(dw[2])>1e-6:
+                    t=-Cw[2]/dw[2]
+                    if t>0:
+                        F=Cw+t*dw
+                        # only trust it if it lands near where depth said, else keep depth
+                        if math.hypot(F[0]-W[0],F[1]-W[1])<0.45:
+                            W=np.array([F[0],F[1],0.02])
             out.append((float(W[0]),float(W[1]),float(W[2]),float(bx.conf[0]),z))
         return out
 
