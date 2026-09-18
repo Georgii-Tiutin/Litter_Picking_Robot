@@ -32,6 +32,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from cv_bridge import CvBridge
 import tf2_ros, transforms3d as tfs
 from ultralytics import YOLO
+from cube_tracker import CubeTracker, Detection
 
 MODEL      = "/home/jetson/cuboid_best_baseline.pt"
 K          = [477.57421875, 0.0, 319.3820495605469,
@@ -53,7 +54,9 @@ MERGE_M       = 0.30          # sightings closer than this are the same cube. 0.
                               # tight: the SAME cube seen from a new viewpoint lands 15-25 cm
                               # away (bearing error at 1.5 m + AMCL error), so it registered as
                               # a new cube and the count climbed past the 7 actually present.
-CONSOLIDATE_M = 0.38          # final pass, merging clusters that drifted together
+# (CONSOLIDATE_M / MIN_SIGHTINGS are unused since the tracker replaced the greedy merge;
+#  confirmation is now CONFIRM_OBS + CONFIRM_VIEWS inside cube_tracker.py)
+CONSOLIDATE_M = 0.38
 MIN_SIGHTINGS = 2             # a real cube is seen many times across 8-step scans at several
                               # waypoints; a single sighting is usually a false positive
 
@@ -93,7 +96,10 @@ class CubePatrol(Node):
         self.plan=ActionClient(self,ComputePathToPose,"compute_path_to_pose")
         self.tfbuf=tf2_ros.Buffer(); tf2_ros.TransformListener(self.tfbuf,self)
         self.model=YOLO(MODEL)
-        self.cubes=[]          # [x, y, z, n_sightings, best_conf]
+        # Whole-frame data association instead of merging each detection into the nearest
+        # cube. Two boxes in ONE image are two different physical objects; a greedy nearest
+        # merge can fold both into one track and destroy that fact. See cube_tracker.py.
+        self.tracker=CubeTracker(gate=MERGE_M)
 
     def cb_rgb(self,m): self._cb_rgb(m)
     def cb_d(self,m):   self.depth=self.b.imgmsg_to_cv2(m,"32FC1").astype(np.float32)
@@ -204,7 +210,7 @@ class CubePatrol(Node):
 
     # ---------------- perception ----------------
     def detect(self):
-        """One inference on the current frame -> list of (x,y,z,conf,range) in the MAP frame."""
+        """One inference on the current frame -> list of Detection objects in the MAP frame."""
         if self.rgb is None or self.depth is None: return []
         rgb=self.rgb.copy(); dep=self.depth.copy()
         try:
@@ -232,7 +238,10 @@ class CubePatrol(Node):
             patch=dep[max(0,my1):my2, max(0,mx1):mx2]
             patch=patch[np.isfinite(patch)&(patch>0)]
             if patch.size<10: continue
-            z=float(np.median(patch))*(0.001 if DEPTH_MM else 1.0)
+            scale=(0.001 if DEPTH_MM else 1.0)
+            z=float(np.median(patch))*scale
+            n_px=int(patch.size)
+            depth_spread=float(np.std(patch))*scale
             if not (R_MIN<z<R_MAX): continue
             u=(x1+x2)/2.0; v=(y1+y2)/2.0
             P=np.array([(u-cx0)*z/fx,(v-cy0)*z/fy,z,1.0])
@@ -251,61 +260,48 @@ class CubePatrol(Node):
                         # only trust it if it lands near where depth said, else keep depth
                         if math.hypot(F[0]-W[0],F[1]-W[1])<0.45:
                             W=np.array([F[0],F[1],0.02])
-            out.append((float(W[0]),float(W[1]),float(W[2]),float(bx.conf[0]),z))
+            out.append(Detection(float(W[0]),float(W[1]),float(W[2]),
+                                 conf=float(bx.conf[0]), rng=z,
+                                 bbox=(x1,y1,x2,y2),
+                                 n_px=n_px, depth_spread=depth_spread))
         return out
 
     def add(self,dets):
-        """Merge sightings, weighting each by 1/range^2 - a cube seen at 0.5 m is located far
-        more accurately than the same cube at 1.8 m, so near views should dominate."""
-        new=0
-        for x,y,z,c,rng in dets:
-            wt=1.0/max(0.25,rng*rng)
-            hit=None
-            for i,cb in enumerate(self.cubes):
-                if math.hypot(cb[0]-x,cb[1]-y)<MERGE_M: hit=i; break
-            if hit is None:
-                self.cubes.append([x,y,z,1,c,wt]); new+=1
-            else:
-                cx,cy,cz,n,bc,W=self.cubes[hit]
-                nw=W+wt; f=wt/nw
-                self.cubes[hit]=[cx+(x-cx)*f, cy+(y-cy)*f, cz+(z-cz)*f, n+1, max(bc,c), nw]
-        return new
+        """Associate an ENTIRE frame at once, under a one-to-one constraint."""
+        p=self.pose()
+        before=len(self.tracker.tracks)
+        self.tracker.update(dets, robot_xy=(p[0],p[1]) if p else None,
+                            stamp=time.time())
+        return max(0,len(self.tracker.tracks)-before)
+
 
     def consolidate(self):
-        """Final pass: clusters that drifted within CONSOLIDATE_M of each other are one cube."""
-        merged=True
-        while merged:
-            merged=False
-            for i in range(len(self.cubes)):
-                for j in range(i+1,len(self.cubes)):
-                    a,b=self.cubes[i],self.cubes[j]
-                    if math.hypot(a[0]-b[0],a[1]-b[1])<CONSOLIDATE_M:
-                        W=a[5]+b[5]; f=b[5]/W
-                        self.cubes[i]=[a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f,
-                                       a[2]+(b[2]-a[2])*f, a[3]+b[3], max(a[4],b[4]), W]
-                        self.cubes.pop(j); merged=True; break
-                if merged: break
+        """No longer needed: one-to-one association keeps tracks distinct as they are
+        created, instead of merging afterwards and hoping the radius was right."""
+        return
 
     def publish(self):
         ma=MarkerArray()
-        for i,(x,y,z,n,c,_w) in enumerate(self.cubes):
-            if n<MIN_SIGHTINGS: continue
+        for i,t in enumerate(self.tracker.tracks):
+            confirmed = (t.state=="confirmed")
             m=Marker()
             m.header.frame_id="map"; m.header.stamp=self.get_clock().now().to_msg()
-            m.ns="cubes"; m.id=i; m.type=Marker.CUBE; m.action=Marker.ADD
-            m.pose.position.x=x; m.pose.position.y=y; m.pose.position.z=max(z,0.02)
+            m.ns="cubes"; m.id=t.id; m.type=Marker.CUBE; m.action=Marker.ADD
+            m.pose.position.x=t.x; m.pose.position.y=t.y; m.pose.position.z=max(t.z,0.02)
             m.pose.orientation.w=1.0
             m.scale.x=m.scale.y=m.scale.z=0.06
-            m.color.r=0.1; m.color.g=1.0; m.color.b=0.2; m.color.a=0.9
+            if confirmed: m.color.r,m.color.g,m.color.b=0.1,1.0,0.2
+            else:         m.color.r,m.color.g,m.color.b=1.0,0.72,0.0
+            m.color.a=0.95
             ma.markers.append(m)
-            t=Marker()
-            t.header=m.header; t.ns="cube_labels"; t.id=1000+i
-            t.type=Marker.TEXT_VIEW_FACING; t.action=Marker.ADD
-            t.pose.position.x=x; t.pose.position.y=y; t.pose.position.z=0.22
-            t.pose.orientation.w=1.0; t.scale.z=0.09
-            t.color.r=t.color.g=t.color.b=1.0; t.color.a=1.0
-            t.text="cube %d  x%d  %.2f"%(i+1,n,c)
-            ma.markers.append(t)
+            lab=Marker(); lab.header=m.header; lab.ns="cube_labels"; lab.id=1000+t.id
+            lab.type=Marker.TEXT_VIEW_FACING; lab.action=Marker.ADD
+            lab.pose.position.x=t.x; lab.pose.position.y=t.y; lab.pose.position.z=0.22
+            lab.pose.orientation.w=1.0; lab.scale.z=0.09
+            lab.color.r=lab.color.g=lab.color.b=1.0; lab.color.a=1.0
+            lab.text="#%d x%d/%dv %s"%(t.id,t.n,len(t.views),
+                                       "" if confirmed else "?")
+            ma.markers.append(lab)
         self.mk.publish(ma)
 
     def scan_here(self):
@@ -317,9 +313,9 @@ class CubePatrol(Node):
             d=self.detect()
             found+=self.add(d)
             self.publish()
-            if d: print("       step %d/%d: %d detection(s), %d candidate(s), %d confirmed"
-                        %(k+1,SCAN_STEPS,len(d),len(self.cubes),
-                          len([c for c in self.cubes if c[3]>=MIN_SIGHTINGS])))
+            if d: print("       step %d/%d: %d detection(s), %d track(s), %d confirmed"
+                        %(k+1,SCAN_STEPS,len(d),len(self.tracker.tracks),
+                          len(self.tracker.confirmed())))
             if k<SCAN_STEPS-1:
                 turn=2*math.pi/SCAN_STEPS
                 t=Twist(); t.angular.z=TURN_SPEED
@@ -379,11 +375,16 @@ def main():
     e.stop(); e.consolidate(); e.publish()
     print("\n=== mission over: %d waypoints reached, %d abandoned, %.0f s ==="
           %(visited,abandoned,time.time()-t_start))
-    print("=== %d cube(s) found ==="%len([c for c in e.cubes if c[3]>=MIN_SIGHTINGS]))
-    for i,(x,y,z,n_,c,_w) in enumerate(e.cubes):
-        if n_>=MIN_SIGHTINGS:
-            print("   cube %d: map (%+.2f, %+.2f) height %.3f m, %d sighting(s), conf %.2f"
-                  %(i+1,x,y,z,n_,c))
+    conf=e.tracker.confirmed()
+    print("=== %d confirmed cube(s), %d tentative ==="
+          %(len(conf),len(e.tracker.tracks)-len(conf)))
+    for t in conf:
+        print("   cube %d: map (%+.2f, %+.2f) height %.3f m, %d sighting(s), conf %.2f"
+              %(t.id,t.x,t.y,t.z,t.n,t.conf))
+    for t in e.tracker.tracks:
+        if t.state!="confirmed":
+            print("   (tentative) #%d (%+.2f,%+.2f) %d sighting(s) from %d viewpoint(s)"
+                  %(t.id,t.x,t.y,t.n,len(t.views)))
     rclpy.shutdown(); return 0
 
 if __name__=="__main__": sys.exit(main())

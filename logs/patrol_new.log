@@ -1,0 +1,70 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+waiting for map, camera and TF ...
+   map      ok
+   colour   ok
+   depth    ok
+   pose     ok
+map 105x137, 5609 free cells, 2160 safe-to-stand, 6 waypoints at 1.15 m spacing
+
+scanning from the starting position first
+       step 1/8: 2 detection(s), 2 track(s), 0 confirmed
+       step 2/8: 2 detection(s), 3 track(s), 0 confirmed
+       step 3/8: 2 detection(s), 3 track(s), 0 confirmed
+       step 4/8: 1 detection(s), 4 track(s), 0 confirmed
+       step 5/8: 3 detection(s), 6 track(s), 0 confirmed
+       step 6/8: 3 detection(s), 8 track(s), 0 confirmed
+       step 7/8: 1 detection(s), 9 track(s), 0 confirmed
+
+[2/6] waypoint (-0.97,-0.42)  batt 12.23 V
+       path ok (61 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 10 track(s), 0 confirmed
+       step 3/8: 1 detection(s), 10 track(s), 1 confirmed
+       step 4/8: 1 detection(s), 10 track(s), 1 confirmed
+       step 6/8: 1 detection(s), 10 track(s), 2 confirmed
+       step 7/8: 2 detection(s), 10 track(s), 3 confirmed
+       step 8/8: 1 detection(s), 10 track(s), 3 confirmed
+
+[3/6] waypoint (-0.97,+0.73)  batt 12.23 V
+       path ok (48 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 11 track(s), 3 confirmed
+       step 5/8: 2 detection(s), 11 track(s), 4 confirmed
+       step 6/8: 2 detection(s), 12 track(s), 4 confirmed
+       step 7/8: 1 detection(s), 11 track(s), 4 confirmed
+       step 8/8: 1 detection(s), 9 track(s), 4 confirmed
+
+[4/6] waypoint (+0.18,+0.73)  batt 12.25 V
+       path ok (40 poses, 0% inscribed)
+       SUCCEEDED
+       step 8/8: 1 detection(s), 7 track(s), 4 confirmed
+
+[5/6] waypoint (-0.97,-1.57)  batt 12.20 V
+       path ok (102 poses, 0% inscribed)
+       SUCCEEDED
+       step 5/8: 1 detection(s), 6 track(s), 4 confirmed
+       step 6/8: 2 detection(s), 7 track(s), 4 confirmed
+       step 8/8: 1 detection(s), 7 track(s), 4 confirmed
+
+[6/6] waypoint (+0.18,-1.57)  batt 12.19 V
+       path ok (39 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 8 track(s), 4 confirmed
+       step 2/8: 1 detection(s), 8 track(s), 4 confirmed
+       step 3/8: 1 detection(s), 8 track(s), 4 confirmed
+       step 5/8: 2 detection(s), 8 track(s), 4 confirmed
+       step 6/8: 1 detection(s), 8 track(s), 4 confirmed
+       step 7/8: 2 detection(s), 9 track(s), 5 confirmed
+       step 8/8: 1 detection(s), 8 track(s), 5 confirmed
+
+=== mission over: 5 waypoints reached, 0 abandoned, 239 s ===
+=== 5 confirmed cube(s), 3 tentative ===
+   cube 1: map (+0.40, -0.19) height 0.020 m, 8 sighting(s), conf 0.99
+   cube 3: map (+0.17, +0.87) height 0.020 m, 5 sighting(s), conf 0.96
+   cube 4: map (-0.61, -0.36) height 0.020 m, 5 sighting(s), conf 0.93
+   cube 5: map (-0.90, -1.43) height 0.020 m, 6 sighting(s), conf 0.98
+   cube 14: map (-0.36, -2.14) height 0.020 m, 4 sighting(s), conf 0.94
+   (tentative) #15 (-0.26,-2.65) 1 sighting(s) from 1 viewpoint(s)
+   (tentative) #16 (+0.69,-1.22) 2 sighting(s) from 1 viewpoint(s)
+   (tentative) #17 (-0.90,-2.61) 1 sighting(s) from 1 viewpoint(s)

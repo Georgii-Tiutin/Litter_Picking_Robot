@@ -1,0 +1,5 @@
+   cube 1: map (+0.40, -0.19) height 0.020 m, 8 sighting(s), conf 0.99
+   cube 3: map (+0.17, +0.87) height 0.020 m, 5 sighting(s), conf 0.96
+   cube 4: map (-0.61, -0.36) height 0.020 m, 5 sighting(s), conf 0.93
+   cube 5: map (-0.90, -1.43) height 0.020 m, 6 sighting(s), conf 0.98
+   cube 14: map (-0.36, -2.14) height 0.020 m, 4 sighting(s), conf 0.94
