@@ -48,7 +48,7 @@ import transforms3d as tfs
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
-from arm_msgs.msg import ArmJoints
+from arm_msgs.msg import ArmJoints, ArmJoint
 from arm_interface.srv import ArmKinemarics
 from ultralytics import YOLO
 
@@ -93,6 +93,25 @@ class Grab(Node):
         t0=time.time()
         while self.arm.get_subscription_count()==0 and time.time()-t0<timeout:
             rclpy.spin_once(self,timeout_sec=0.05)
+    def send_gripper(self,val,ms=1200):
+        """Move ONLY the claw, with its own time budget.
+
+        Opening used to be bundled into the first approach command, so the claw had to
+        travel 142 -> 30 while four other joints moved, inside one 1800 ms budget. After a
+        FAILED grasp the arm returns to the observation pose with the claw CLOSED, so that
+        journey is at its longest exactly when it is least likely to finish - and the next
+        command lowers a partly-shut claw onto the cube. Intermittent, and dependent on
+        where the claw happened to start. Open it first, on its own, and confirm the time.
+        """
+        m=ArmJoints()
+        cur=[90,OBS_J2,0,0,90]
+        m.joint1,m.joint2,m.joint3,m.joint4,m.joint5=[int(v) for v in cur]
+        m.joint6=int(val); m.time=int(ms)
+        self.wait_sub()
+        for _ in range(3):
+            self.arm.publish(m); rclpy.spin_once(self,timeout_sec=0.03); time.sleep(0.08)
+        time.sleep(ms/1000.0+0.3)
+
     def send_joints(self,j,ms=2000):
         m=ArmJoints()
         m.joint1,m.joint2,m.joint3,m.joint4,m.joint5,m.joint6=[int(v) for v in j]
@@ -346,21 +365,18 @@ def main():
     theta=math.degrees(math.atan2(gy,gx))
     # jaw = theta + (j5 - 90);  want jaw == short_ang  ->  j5 = 90 + short_ang - theta
     j5=(90.0+f["short_ang"]-theta)%180.0
-    # The jaws must close along a FACE. For a SQUARE footprint both short_ang and
-    # short_ang+90 are faces, so j5 and j5+90 are equally valid - but they are not equally
-    # forgiving: a heavily rotated wrist sweeps a wider arc and needs the cube well inside
-    # the reachable zone, while a near-straight wrist tolerates it sitting slightly outside.
-    # So for a square, keep the face alignment and take the representative nearer 90 deg.
+    # NOTE (2026-09-16): a 'prefer the straighter wrist for square footprints' flip lived
+    # here and has been REMOVED. It fired whenever the measured aspect exceeded 0.85, and
+    # that measurement is not reliable enough to carry the decision: when depth segmentation
+    # captures only part of a 3x6 cuboid's top face the footprint LOOKS square, the flip then
+    # rotated the jaws 90 deg onto the LONG axis - and because span was computed from the
+    # same truncated measurement (30-31 mm) the guard saw nothing wrong and let it proceed.
+    # Observed directly by the user: the robot attempting a 3x6 on its long side, and a
+    # straight pickup turned into a rotated one. Both trace to that flip.
     #
-    # NOT the same as forcing j5=90, which was tried on 2026-09-15 and was WRONG: it ignores
-    # orientation entirely, and a 45 deg misalignment on a 40 mm square spans
-    # 40*(|cos45|+|sin45|) = 57 mm, tripping the 45 mm span guard. The guard caught it.
-    if ratio > SQUARE_RATIO:
-        alt=(j5+90.0)%180.0
-        if abs(alt-90.0) < abs(j5-90.0):
-            print("    square footprint (aspect %.2f): both %d and %d align with a face,"
-                  " taking the straighter wrist"%(ratio,int(round(j5)),int(round(alt))))
-            j5=alt
+    # The plain rule above was derived and confirmed on a 3x6 cuboid on 2026-09-11. It is
+    # validated; the flip was a cosmetic preference layered on top. An optimisation that
+    # depends on a measurement which is only sometimes right is worse than no optimisation.
     if j5>180: j5-=180
     j5=int(round(j5))
     if J5_FORCE is not None:
@@ -386,6 +402,10 @@ def main():
     else:
         print("    gripper_joint is 0 -> wrist neutral from IK")
     print("    above=%s  grip=%s"%(j_above,j_grip))
+    # Open the claw FIRST, by itself, before any arm motion. Cheap insurance against
+    # lowering a closed gripper onto the cube (observed 2026-09-15).
+    print("    opening the claw before approaching")
+    g.send_gripper(GRIP_OPEN,1100)
     g.send_joints(j_above+[GRIP_OPEN],1800)
     g.send_joints(j_grip +[GRIP_OPEN],1500)
     g.send_joints(j_grip +[GRIP_CLOSE],1200)
@@ -396,7 +416,35 @@ def main():
     g.send_joints([OBS[0],OBS[1],OBS[2],OBS[3],OBS[4],GRIP_CLOSE],2000); g.spin(1.2)
     still=g.detect(frames=4)
     if still is None:
-        print("    no cube on the floor -> GRASP SUCCEEDED"); return 0
+        # "I cannot see it" is NOT "I am holding it". At the observation pose the camera only
+        # sees 0.16-0.58 m, so a cube knocked sideways or beyond that window simply vanishes
+        # and the old check declared success. On 2026-09-16 the robot reported PLACED for a
+        # cube it had merely shoved away, and the drop zone was found empty.
+        #
+        # So look AGAIN from the navigation pose, which sees 0.30-1.32 m - a far wider area.
+        # Raise joint2 alone over /arm_joint so the gripper is never re-commanded (an
+        # ArmJoints message carries joint6 and would drop a cube that IS held).
+        print("    nothing in the near view - checking the WIDE view before believing it")
+        try:
+            jp=g.create_publisher(ArmJoint,"arm_joint",10)
+            m=ArmJoint(); m.id=2; m.joint=150; m.time=2000
+            t0=time.time()
+            while jp.get_subscription_count()==0 and time.time()-t0<5:
+                rclpy.spin_once(g,timeout_sec=0.05)
+            for _ in range(3):
+                jp.publish(m); rclpy.spin_once(g,timeout_sec=0.03); time.sleep(0.05)
+            time.sleep(2.6); g.spin(1.0)
+            wide=g.detect(frames=4)
+        except Exception as ex:
+            print("    (wide check unavailable: %s)"%str(ex)[:50]); wide=None
+        if wide is not None:
+            dw=math.hypot(wide["fine"]["base"][0]-b[0],wide["fine"]["base"][1]-b[1])*1000
+            if dw<250:
+                print("    WIDE view shows a cube %.0f mm from the target - it was KNOCKED,"
+                      " not gripped -> GRASP FAILED"%dw)
+                return 1
+            print("    wide view sees a cube %.0f mm away, too far to be the target"%dw)
+        print("    no cube near the target in either view -> GRASP SUCCEEDED"); return 0
     d=math.hypot(still["fine"]["base"][0]-b[0],still["fine"]["base"][1]-b[1])*1000
     if d<40:
         print("    cube still at the same place (%.0f mm away) -> GRASP FAILED"%d)

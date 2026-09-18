@@ -1,0 +1,4 @@
+cube 1: map (+0.66, +0.40) height 0.030 m, 1 sighting(s), conf 1.00 pending
+cube 2: map (-1.00, +0.16) height 0.030 m, 1 sighting(s), conf 1.00 false
+cube 3: map (-0.36, +1.01) height 0.030 m, 1 sighting(s), conf 1.00 failed
+cube 4: map (-0.76, -0.94) height 0.030 m, 1 sighting(s), conf 1.00 pending

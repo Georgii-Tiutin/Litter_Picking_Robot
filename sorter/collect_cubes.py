@@ -417,8 +417,25 @@ class Collector(Node):
                     print("       WARNING: asked for %.3f m, achieved %.3f m"%(abs(forward),got))
         return True
 
+class _ShResult:
+    def __init__(self,rc=1,out="",err=""): self.returncode=rc; self.stdout=out; self.stderr=err
+
 def sh(cmd,timeout=240):
-    return subprocess.run(cmd,shell=True,capture_output=True,text=True,timeout=timeout)
+    """Run a command, never raising.
+
+    `ros2 param set` and `ros2 service call` are known to hang on this robot under load - one
+    was measured stuck for over an hour. Letting TimeoutExpired propagate killed the whole
+    collection on 2026-09-16 at the second cube, after the first had already been handled.
+    A slow parameter write must degrade the mission, not end it.
+    """
+    try:
+        return subprocess.run(cmd,shell=True,capture_output=True,text=True,timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print("       (timed out after %ss: %s)"%(timeout,cmd.split("&&")[-1].strip()[:60]))
+        return _ShResult(1,"","timeout")
+    except Exception as ex:
+        print("       (command failed: %s)"%str(ex)[:60])
+        return _ShResult(1,"",str(ex))
 
 def tf_publisher(action):
     """Start/stop the static camera transform publisher.
@@ -536,60 +553,32 @@ def run_mission(e):
         print("   confirmed at (%+.3f,%+.3f) from %d sighting(s)"%(cx,cy,len(seen)))
         c["x"],c["y"]=cx,cy; e.publish()
 
-        # 3. close in, in TWO stages.
-        #    The navigation camera only sees floor from 0.30 m out, so once the robot is at
-        #    grasp distance the cube is too close to be re-measured - the old single-stage
-        #    version always reported "no longer visible", which was a property of the
-        #    geometry, not of the cube. So refine at REFINE_R, where it is still visible,
-        #    and only then make the short blind move to GRASP_R.
-        p=e.pose_sure()
-        if p is None:
-            print("   lost the map transform before lining up - leaving as pending"); continue
-        d=math.hypot(cx-p[0],cy-p[1]); bearing=math.atan2(cy-p[1],cx-p[0])
-        turn=(bearing-p[2]+math.pi)%(2*math.pi)-math.pi
-        print("   cube is %.3f m away, %.0f deg off the nose"%(d,math.degrees(turn)))
-        e.nudge(turn=turn)
-        if d-REFINE_R>0.04:
-            e.nudge(forward=d-REFINE_R)
-            e.spin(1.2)
-            again=[]
-            for _ in range(6):
-                dd=e.detect()
-                if dd is None: e.spin(0.4); continue
-                again += [x for x in dd if math.hypot(x[0]-cx,x[1]-cy)<MATCH_R]
-                e.spin(0.4)
-                if len(again)>=3: break
-            if again:
-                nx=float(np.median([s[0] for s in again])); ny=float(np.median([s[1] for s in again]))
-                print("   refined at %.3f m: cube now (%+.3f,%+.3f), moved %.3f m"
-                      %(REFINE_R,nx,ny,math.hypot(nx-cx,ny-cy)))
-                cx,cy=nx,ny; c["x"],c["y"]=cx,cy; e.publish()
-                pp=e.pose()
-                b2=math.atan2(cy-pp[1],cx-pp[0])
-                e.nudge(turn=(b2-pp[2]+math.pi)%(2*math.pi)-math.pi)
-            else:
-                print("   could not re-measure at %.2f m - using the earlier estimate"%REFINE_R)
-        p=e.pose_sure() or e.pose()
-        if p is None: print("   no pose for the final move - skipping"); continue
-        d3=math.hypot(cx-p[0],cy-p[1])
-        if d3-GRASP_R>0.03: e.nudge(forward=d3-GRASP_R)
-        p=e.pose_sure() or (cx+GRASP_R,cy,0.0)
-        d2=math.hypot(cx-p[0],cy-p[1])
-        print("   final stand-off %.3f m (arm reaches %.2f-%.2f m at grip height)"
-              %(d2,REACH_MIN,REACH_MAX))
-
-        # 4. grasp - the arm moves, so depth marking must be silenced AND the TF taken down
+        # 3+4. Hand the last 30 cm to the VISUAL SERVO, then grasp.
+        #
+        # This replaces the old open-loop approach, which drove to a fixed stand-off computed
+        # from MAP coordinates and therefore inherited every localisation error, and whose
+        # constant had to be bracketed between two invisible limits (arm reach 0.150-0.245 m,
+        # grasp camera near limit 0.16 m). It was tuned from crash reports and still failed
+        # half the time.
+        #
+        # servo_grasp.py closes the loop on the arm's own reachable zone, entirely in the BASE
+        # frame from FK - no map, no AMCL, no TF from the localiser - and drives until the cube
+        # is CENTRED in that zone before handing over. Measured 2026-09-15: 15/20 grasps with
+        # zero convergence failures, against 5/10 for the open-loop version.
         e.set_near_ignore(NEAR_IGNORE_GRASP, "(arm moving - trust no depth)")
         tf_publisher("stop")
-        g=sh("cd /home/jetson/calib && ROS_DOMAIN_ID=30 python3 stationary_pickup.py",timeout=300)
-        tail=[l for l in g.stdout.splitlines() if l.strip()][-3:]
-        for l in tail: print("      | %s"%l)
+        g=sh("cd /home/jetson/calib && ROS_DOMAIN_ID=30 python3 servo_grasp.py 1", timeout=600)
+        lines=[l for l in g.stdout.splitlines() if l.strip()]
+        for l in [l for l in lines if any(k in l for k in
+                  ("CENTRED","cube base","SUCCEEDED","FAILED","ABORT","could not bring",
+                   "jaw axis"))][-5:]:
+            print("      | %s"%l.strip())
         ok = (g.returncode==0)
         if not ok:
-            print("   GRASP FAILED")
+            print("   SERVO+GRASP FAILED")
             c["state"]="failed"; failed+=1; e.publish()
-            e.set_near_ignore(NEAR_IGNORE_NAV, "(nothing held)")
             e.send_arm(NAV_POSE,GRIP_OPEN,1800)
+            e.set_near_ignore(NEAR_IGNORE_NAV, "(nothing held)")
             tf_publisher("start"); e.clear_costmaps(); continue
 
         # 5. back to the navigation pose WITHOUT touching the gripper

@@ -1,0 +1,37 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+4 floor cube(s) to collect; drop zone at (+0.025,-0.425)
+   near-range exclusion -> 0.00 m (mission start, jaws empty) [ok]
+
+=== [1/4] cube #2 at (-1.00,+0.16)  batt 12.10 V ===
+   localisation: scan-to-map median miss 0.053 m -> ok
+   already 0.146 m from the approach pose - turning 67 deg in place
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [2/4] cube #3 at (-0.23,+1.19)  batt 12.14 V ===
+   localisation: scan-to-map median miss 0.043 m -> ok
+   approach: SUCCEEDED
+   confirmed at (-0.355,+1.014) from 3 sighting(s)
+   near-range exclusion -> 5.00 m (arm moving - trust no depth) [ok]
+      | [ 3] cube base (+0.205,-0.010) r=0.205 m  lat -0.010  conf 0.76  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+      | | jaw axis 54.2 deg, misaligned -0.3 deg -> jaws must span 29 mm
+      | | cube still at the same place (21 mm away) -> GRASP FAILED
+      | > jaw axis 54.2 deg, misaligned -0.3 deg -> jaws must span 29 mm
+      | grasp FAILED
+   SERVO+GRASP FAILED
+   near-range exclusion -> 0.00 m (nothing held) [ok]
+
+=== [3/4] cube #4 at (-0.76,-0.94)  batt 12.13 V ===
+   localisation: scan-to-map median miss 0.155 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.168 m
+      | NOT CONVERGED - needs a short drive, rotation was not enough
+   localisation: scan-to-map median miss 0.171 m -> BAD
+   ABORT: cannot localise - every map coordinate is meaningless
+
+=== collected 0, false positives 1, failed 1 ===
+   #1  (+0.66,+0.40)  pending
+   #2  (-1.00,+0.16)  false
+   #3  (-0.36,+1.01)  failed
+   #4  (-0.76,-0.94)  pending
+   near-range exclusion -> 0.00 m (mission over) [ok]

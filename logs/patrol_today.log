@@ -1,0 +1,83 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+waiting for map, camera and TF ...
+   map      ok
+   colour   ok
+   depth    ok
+   pose     ok
+map 105x137, 5609 free cells, 2160 safe-to-stand, 6 waypoints at 1.15 m spacing
+
+scanning from the starting position first
+       step 1/8: 2 detection(s), 2 track(s), 0 confirmed
+       step 2/8: 1 detection(s), 2 track(s), 0 confirmed
+       step 4/8: 2 detection(s), 4 track(s), 0 confirmed
+       step 5/8: 3 detection(s), 6 track(s), 0 confirmed
+       step 6/8: 2 detection(s), 7 track(s), 0 confirmed
+       step 7/8: 1 detection(s), 7 track(s), 0 confirmed
+       step 8/8: 2 detection(s), 9 track(s), 0 confirmed
+
+[1/6] waypoint (+0.18,-0.42)  batt 12.22 V
+       path ok (17 poses, 6% inscribed)
+       SUCCEEDED
+       step 1/8: 3 detection(s), 11 track(s), 0 confirmed
+       step 2/8: 1 detection(s), 11 track(s), 1 confirmed
+       step 3/8: 2 detection(s), 11 track(s), 2 confirmed
+       step 4/8: 2 detection(s), 12 track(s), 2 confirmed
+       step 8/8: 3 detection(s), 14 track(s), 3 confirmed
+
+[2/6] waypoint (-0.97,-0.42)  batt 12.28 V
+       path ok (53 poses, 0% inscribed)
+       SUCCEEDED
+       step 2/8: 1 detection(s), 14 track(s), 3 confirmed
+       step 3/8: 2 detection(s), 14 track(s), 3 confirmed
+       step 4/8: 1 detection(s), 14 track(s), 3 confirmed
+       step 5/8: 1 detection(s), 14 track(s), 3 confirmed
+       step 6/8: 3 detection(s), 16 track(s), 3 confirmed
+       step 7/8: 3 detection(s), 18 track(s), 4 confirmed
+       step 8/8: 1 detection(s), 18 track(s), 4 confirmed
+
+[3/6] waypoint (-0.97,+0.73)  batt 12.22 V
+       path ok (58 poses, 0% inscribed)
+       SUCCEEDED
+       step 2/8: 1 detection(s), 15 track(s), 4 confirmed
+       step 4/8: 3 detection(s), 15 track(s), 4 confirmed
+       step 5/8: 2 detection(s), 15 track(s), 4 confirmed
+       step 6/8: 1 detection(s), 14 track(s), 4 confirmed
+       step 8/8: 1 detection(s), 14 track(s), 4 confirmed
+
+[4/6] waypoint (+0.18,+0.73)  batt 12.21 V
+       path ok (51 poses, 0% inscribed)
+       SUCCEEDED
+       step 4/8: 1 detection(s), 12 track(s), 5 confirmed
+       step 5/8: 1 detection(s), 12 track(s), 5 confirmed
+       step 6/8: 1 detection(s), 13 track(s), 5 confirmed
+
+[5/6] waypoint (-0.97,-1.57)  batt 12.21 V
+       path ok (100 poses, 0% inscribed)
+       SUCCEEDED
+       step 4/8: 1 detection(s), 6 track(s), 5 confirmed
+       step 5/8: 1 detection(s), 6 track(s), 5 confirmed
+       step 7/8: 2 detection(s), 7 track(s), 5 confirmed
+       step 8/8: 1 detection(s), 7 track(s), 5 confirmed
+
+[6/6] waypoint (+0.18,-1.57)  batt 12.23 V
+       path ok (39 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 8 track(s), 5 confirmed
+       step 2/8: 1 detection(s), 8 track(s), 5 confirmed
+       step 4/8: 1 detection(s), 8 track(s), 6 confirmed
+       step 5/8: 1 detection(s), 8 track(s), 6 confirmed
+       step 7/8: 1 detection(s), 7 track(s), 6 confirmed
+       step 8/8: 2 detection(s), 9 track(s), 6 confirmed
+
+=== mission over: 6 waypoints reached, 0 abandoned, 276 s ===
+=== 6 confirmed cube(s), 3 tentative ===
+   cube 1: map (+0.80, +0.32) height 0.020 m, 5 sighting(s), conf 0.91
+   cube 4: map (-0.89, +0.14) height 0.020 m, 4 sighting(s), conf 0.95
+   cube 5: map (-0.94, -0.92) height 0.020 m, 7 sighting(s), conf 0.97
+   cube 7: map (-0.34, -1.78) height 0.020 m, 8 sighting(s), conf 0.98
+   cube 17: map (-0.32, +1.08) height 0.020 m, 4 sighting(s), conf 0.96
+   cube 23: map (-0.70, -1.11) height 0.020 m, 4 sighting(s), conf 0.95
+   (tentative) #24 (+0.90,-1.41) 1 sighting(s) from 1 viewpoint(s)
+   (tentative) #25 (+0.42,-2.79) 1 sighting(s) from 1 viewpoint(s)
+   (tentative) #26 (+0.26,-2.77) 1 sighting(s) from 1 viewpoint(s)

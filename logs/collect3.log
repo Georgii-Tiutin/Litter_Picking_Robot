@@ -1,0 +1,35 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+4 floor cube(s) to collect; drop zone at (+0.025,-0.425)
+   near-range exclusion -> 0.00 m (mission start, jaws empty) [ok]
+
+=== [1/4] cube #3 at (-0.23,+1.19)  batt 12.15 V ===
+   localisation: scan-to-map median miss 0.182 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.051 m
+      | LOCALISED - the robot knows where it is
+   localisation: scan-to-map median miss 0.051 m -> ok
+   already 0.160 m from the approach pose - turning 17 deg in place
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [2/4] cube #1 at (+0.66,+0.40)  batt 12.12 V ===
+   localisation: scan-to-map median miss 0.072 m -> ok
+   approach: SUCCEEDED
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [3/4] cube #2 at (-1.00,+0.16)  batt 12.16 V ===
+   localisation: scan-to-map median miss 0.324 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.065 m
+      | LOCALISED - the robot knows where it is
+   localisation: scan-to-map median miss 0.058 m -> ok
+   approach: SUCCEEDED
+   confirmed at (-1.021,+0.408) from 3 sighting(s)
+   near-range exclusion -> 5.00 m (arm moving - trust no depth) [ok]
+      | [11] cube base (+0.206,+0.014) r=0.206 m  lat +0.014  conf 0.97  j5~86(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+      | | jaw axis 42.2 deg, misaligned -0.5 deg -> jaws must span 32 mm
+      | | cube still at the same place (23 mm away) -> GRASP FAILED
+      | > jaw axis 42.2 deg, misaligned -0.5 deg -> jaws must span 32 mm
+      | grasp FAILED
+   SERVO+GRASP FAILED
+   near-range exclusion -> 0.00 m (nothing held) [ok]

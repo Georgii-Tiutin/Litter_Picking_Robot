@@ -1,0 +1,13 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+parking the arm at the observation pose [90, 120, 0, 0, 90, 30]
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 1: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.224,+0.011) r=0.224 m  lat +0.011  conf 0.96  j5~87(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.189,+0.011) r=0.189 m  lat +0.011  conf 0.98  j5~87(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 8.4 deg  short_ang 29.9 deg  -> j5 111  (vendor would say 70)
+      > jaw axis 29.4 deg, misaligned -0.5 deg -> jaws must span 30 mm
+   grasp SUCCEEDED
