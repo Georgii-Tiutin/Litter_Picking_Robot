@@ -77,7 +77,24 @@ CARRY_J2   = 150
 # The held cube sits right under the camera and would otherwise be marked as an obstacle
 # permanently in front of the robot. Ignore the nearest slice of the depth view - the
 # "bottom half" - and rely on what is beyond it.
-NEAR_IGNORE = 0.35
+# The near-range exclusion is PHASE-DEPENDENT, and getting that wrong cost a day:
+#   while CARRYING  : the cube in the jaws sits right under the camera and would be marked as
+#                     a permanent obstacle ahead, so the robot circles one spot forever.
+#   while NAVIGATING: the same exclusion blinds the robot in its last ~20 cm of approach, and
+#                     since the lidar cannot see a 3 cm cuboid at all, it drives straight over
+#                     them. That is the hit-and-run of 2026-09-15.
+# Both values are correct for their own phase and wrong for the other, so it must be switched
+# at the phase boundary rather than set once globally.
+NEAR_IGNORE_CARRY = 0.35   # ignore anything this close while a cube is held
+NEAR_IGNORE_NAV   = 0.0    # see everything the camera can while driving
+NEAR_IGNORE_GRASP = 5.0    # mark NOTHING from depth while the arm is moving.
+# Measured 2026-09-15: a cube in the gripper returns ZERO depth points in either the
+# observation pose (nearest return 0.297 m) or the carry pose (0.452 m) - it sits inside the
+# sensor's blind zone, which is why it appears black. So the held cube was never the phantom
+# obstacle. The real hazard is the GRASP itself: the arm sweeps through the camera's view at
+# close range while the costmap is still using the last STATIC camera transform, which never
+# expires just because its publisher stopped. Those points are marked at wrong positions, and
+# raytrace_min_range 0.45 then makes them PERMANENT because nothing closer is ever cleared.
 GRIP_OPEN, GRIP_HOLD = 30, 142
 GOAL_TIMEOUT = 150.0
 STUCK_DIST, STUCK_YAW, STUCK_WIN = 0.04, 0.12, 16.0
@@ -191,6 +208,28 @@ class Collector(Node):
     def stop(self):
         t=Twist()
         for _ in range(12): self.cmd.publish(t); rclpy.spin_once(self,timeout_sec=0.02)
+    def set_near_ignore(self, metres, why=""):
+        """Switch the costmap's near-range exclusion, and VERIFY it took.
+
+        A silent failure here is dangerous in both directions - either the robot chases a
+        phantom obstacle it is carrying, or it goes blind to the cubes in front of it - so
+        the value is read back rather than assumed.
+        """
+        ok=True
+        for cm in ("local_costmap","global_costmap"):
+            sh("ROS_DOMAIN_ID=30 ros2 param set /%s/%s "
+               "obstacle_layer.pointcloud.obstacle_min_range %.3f"%(cm,cm,metres), timeout=40)
+        r=sh("ROS_DOMAIN_ID=30 ros2 param get /local_costmap/local_costmap "
+             "obstacle_layer.pointcloud.obstacle_min_range", timeout=40)
+        got=r.stdout.strip().split()[-1] if r.stdout.strip() else "?"
+        try: ok = abs(float(got)-metres) < 1e-3
+        except ValueError: ok=False
+        print("   near-range exclusion -> %.2f m %s [%s]"
+              %(metres, why, "ok" if ok else "FAILED, read back %s"%got))
+        # stale marks from the previous phase must not survive the switch
+        self.clear_costmaps()
+        return ok
+
     def clear_costmaps(self):
         for c in (self.clr_l,self.clr_g):
             if c.wait_for_service(timeout_sec=4.0):
@@ -411,12 +450,25 @@ def main():
     rclpy.init(); e=Collector()
     e.cubes=load()
     print("%d floor cube(s) to collect; drop zone at (%+.3f,%+.3f)"%(len(e.cubes),DROP[0],DROP[1]))
+    # A run killed mid-carry leaves the exclusion at the CARRY value, which would blind the
+    # next run during its approach. Always begin from a known state.
+    e.set_near_ignore(NEAR_IGNORE_NAV, "(mission start, jaws empty)")
     t0=time.time()
     while time.time()-t0<40 and (e.rgb is None or e.depth is None or e.pose() is None):
         rclpy.spin_once(e,timeout_sec=0.2)
     if e.pose() is None: print("ABORT: no pose"); return 2
     e.publish()
 
+    try:
+        return run_mission(e)
+    finally:
+        # However this ends - success, exception, Ctrl-C - the costmap must not be left
+        # ignoring near obstacles, or the next thing to drive is blind.
+        try: e.set_near_ignore(NEAR_IGNORE_NAV, "(mission over)")
+        except Exception: pass
+        rclpy.shutdown()
+
+def run_mission(e):
     order=sorted(range(len(e.cubes)),
                  key=lambda i:math.hypot(e.cubes[i]["x"]-e.pose()[0],e.cubes[i]["y"]-e.pose()[1]))
     if LIMIT: order=order[:LIMIT]
@@ -526,7 +578,8 @@ def main():
         print("   final stand-off %.3f m (arm reaches %.2f-%.2f m at grip height)"
               %(d2,REACH_MIN,REACH_MAX))
 
-        # 4. grasp - the arm moves, so the camera TF must be taken down first
+        # 4. grasp - the arm moves, so depth marking must be silenced AND the TF taken down
+        e.set_near_ignore(NEAR_IGNORE_GRASP, "(arm moving - trust no depth)")
         tf_publisher("stop")
         g=sh("cd /home/jetson/calib && ROS_DOMAIN_ID=30 python3 stationary_pickup.py",timeout=300)
         tail=[l for l in g.stdout.splitlines() if l.strip()][-3:]
@@ -535,6 +588,7 @@ def main():
         if not ok:
             print("   GRASP FAILED")
             c["state"]="failed"; failed+=1; e.publish()
+            e.set_near_ignore(NEAR_IGNORE_NAV, "(nothing held)")
             e.send_arm(NAV_POSE,GRIP_OPEN,1800)
             tf_publisher("start"); e.clear_costmaps(); continue
 
@@ -542,6 +596,7 @@ def main():
         print("   grasped; raising joint2 %d -> %d via /arm_joint (gripper untouched)"
               %(120,CARRY_J2))
         e.move_joint(2,CARRY_J2,2200)
+        e.set_near_ignore(NEAR_IGNORE_CARRY, "(carrying a cube)")
         tf_publisher("start"); e.clear_costmaps()
 
         # 6. to the drop zone
@@ -549,6 +604,7 @@ def main():
         if p is None:
             print("   lost the map transform while holding a cube - placing it here instead")
             sh("cd /home/jetson/calib && ROS_DOMAIN_ID=30 python3 place_cube.py",timeout=180)
+            e.set_near_ignore(NEAR_IGNORE_NAV, "(cube released)")
             c["state"]="failed"; failed+=1; e.publish(); continue
         ang=math.atan2(p[1]-DROP[1],p[0]-DROP[0])
         sx,sy=DROP[0]+PLACE_STANDOFF*math.cos(ang), DROP[1]+PLACE_STANDOFF*math.sin(ang)
@@ -569,6 +625,7 @@ def main():
         if r!="SUCCEEDED":
             print("   could not reach the zone while holding a cube - placing it where it stands")
             sh("cd /home/jetson/calib && ROS_DOMAIN_ID=30 python3 place_cube.py",timeout=180)
+            e.set_near_ignore(NEAR_IGNORE_NAV, "(cube released where it stood)")
             c["state"]="failed"; failed+=1; e.publish(); continue
 
         # final alignment onto the zone itself
@@ -591,6 +648,7 @@ def main():
         else:
             c["state"]="picked"; done+=1
             print("   PLACED in the zone")
+        e.set_near_ignore(NEAR_IGNORE_NAV, "(cube released)")
         e.publish()
         e.nudge(forward=-0.28)           # back off so the next approach is not blocked
         e.send_arm(NAV_POSE,GRIP_OPEN,1800)   # claw open again, ready for the next cube
@@ -604,6 +662,6 @@ def main():
         for i,c in enumerate(e.cubes):
             f.write("cube %d: map (%+.2f, %+.2f) height 0.030 m, 1 sighting(s), conf 1.00 %s\n"
                     %(i+1,c["x"],c["y"],c["state"]))
-    rclpy.shutdown(); return 0
+    return 0
 
 if __name__=="__main__": sys.exit(main())
