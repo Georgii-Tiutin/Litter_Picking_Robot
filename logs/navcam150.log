@@ -1,0 +1,8 @@
+parking arm at [90, 150, 0, 0, 90, 30]
+FK end-effector: (0.1467, 0.0002, 0.2472)  rpy (0.0001, 0.5236, 0.0000)
+base_footprint -> camera_link  (single parent; driver supplies the rest of the chain)
+   translation (0.0833, 0.0022, 0.3394) m
+   quaternion  (0.0000, 0.2588, -0.0000, 0.9659) xyzw
+   implied camera_depth_optical_frame at (0.0833, 0.0022, 0.3394)
+
+static transform published. KEEP THIS RUNNING and do NOT move the arm.

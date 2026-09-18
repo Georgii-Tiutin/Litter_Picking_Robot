@@ -1,0 +1,120 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+waiting for map, camera and TF ...
+   map      ok
+   colour   ok
+   depth    ok
+   pose     ok
+map 105x137, 13489 free cells, 6813 safe-to-stand, 17 waypoints at 1.15 m spacing
+
+scanning from the starting position first
+       step 1/8: 2 detection(s), 2 candidate(s), 0 confirmed
+       step 2/8: 3 detection(s), 3 candidate(s), 2 confirmed
+       step 3/8: 2 detection(s), 4 candidate(s), 3 confirmed
+       step 4/8: 3 detection(s), 6 candidate(s), 4 confirmed
+       step 5/8: 1 detection(s), 6 candidate(s), 4 confirmed
+       step 7/8: 2 detection(s), 8 candidate(s), 4 confirmed
+       step 8/8: 1 detection(s), 9 candidate(s), 4 confirmed
+
+[2/17] waypoint (+0.18,+0.73)  batt 12.16 V
+       path ok (38 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 9 candidate(s), 4 confirmed
+       step 4/8: 1 detection(s), 9 candidate(s), 5 confirmed
+       step 5/8: 1 detection(s), 9 candidate(s), 5 confirmed
+       step 6/8: 4 detection(s), 11 candidate(s), 7 confirmed
+       step 7/8: 2 detection(s), 11 candidate(s), 8 confirmed
+
+[3/17] waypoint (-3.27,+1.88)  batt 12.15 V
+       ABANDONED: no path
+
+[4/17] waypoint (-3.27,-3.87)  batt 12.15 V
+       ABANDONED: no path
+
+[5/17] waypoint (-2.12,-3.87)  batt 12.15 V
+       ABANDONED: no path
+
+[6/17] waypoint (-0.97,-3.87)  batt 12.15 V
+       ABANDONED: no path
+
+[7/17] waypoint (+0.18,-3.87)  batt 12.15 V
+       ABANDONED: no path
+
+[8/17] waypoint (+1.33,-2.72)  batt 12.15 V
+       ABANDONED: no path
+
+[9/17] waypoint (-3.27,-2.72)  batt 12.15 V
+       ABANDONED: no path
+
+[10/17] waypoint (-3.27,-1.57)  batt 12.15 V
+       ABANDONED: no path
+
+[11/17] waypoint (-0.97,-1.57)  batt 12.15 V
+       path ok (100 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 12 candidate(s), 8 confirmed
+       step 2/8: 1 detection(s), 13 candidate(s), 8 confirmed
+       step 3/8: 2 detection(s), 13 candidate(s), 9 confirmed
+       step 4/8: 1 detection(s), 14 candidate(s), 9 confirmed
+       step 5/8: 1 detection(s), 14 candidate(s), 10 confirmed
+       step 6/8: 1 detection(s), 15 candidate(s), 10 confirmed
+       step 7/8: 2 detection(s), 17 candidate(s), 10 confirmed
+       step 8/8: 2 detection(s), 18 candidate(s), 11 confirmed
+
+[12/17] waypoint (+0.18,-1.57)  batt 12.15 V
+       path ok (43 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 19 candidate(s), 11 confirmed
+       step 2/8: 1 detection(s), 19 candidate(s), 12 confirmed
+       step 3/8: 1 detection(s), 19 candidate(s), 13 confirmed
+       step 4/8: 2 detection(s), 19 candidate(s), 13 confirmed
+       step 5/8: 1 detection(s), 19 candidate(s), 13 confirmed
+       step 6/8: 3 detection(s), 20 candidate(s), 14 confirmed
+       step 7/8: 1 detection(s), 20 candidate(s), 14 confirmed
+       step 8/8: 1 detection(s), 21 candidate(s), 14 confirmed
+
+[13/17] waypoint (+1.33,-1.57)  batt 12.13 V
+       ABANDONED: no path
+
+[14/17] waypoint (+0.18,-0.42)  batt 12.13 V
+       path ok (48 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 3 detection(s), 21 candidate(s), 14 confirmed
+       step 2/8: 1 detection(s), 21 candidate(s), 14 confirmed
+       step 3/8: 2 detection(s), 21 candidate(s), 14 confirmed
+       step 4/8: 5 detection(s), 21 candidate(s), 14 confirmed
+       step 5/8: 2 detection(s), 21 candidate(s), 14 confirmed
+       step 6/8: 1 detection(s), 21 candidate(s), 14 confirmed
+       step 7/8: 1 detection(s), 21 candidate(s), 14 confirmed
+       step 8/8: 1 detection(s), 22 candidate(s), 14 confirmed
+
+[15/17] waypoint (-0.97,-0.42)  batt 12.12 V
+       path ok (49 poses, 0% inscribed)
+       SUCCEEDED
+       step 2/8: 1 detection(s), 23 candidate(s), 14 confirmed
+       step 3/8: 1 detection(s), 24 candidate(s), 14 confirmed
+       step 5/8: 1 detection(s), 24 candidate(s), 14 confirmed
+       step 6/8: 2 detection(s), 24 candidate(s), 14 confirmed
+       step 7/8: 3 detection(s), 24 candidate(s), 14 confirmed
+       step 8/8: 1 detection(s), 24 candidate(s), 14 confirmed
+
+[16/17] waypoint (-3.27,-0.42)  batt 12.13 V
+       ABANDONED: no path
+
+[17/17] waypoint (-3.27,+0.73)  batt 12.13 V
+       ABANDONED: no path
+
+=== mission over: 5 waypoints reached, 11 abandoned, 255 s ===
+=== 12 cube(s) found ===
+   cube 1: map (+0.23, +0.85) height 0.017 m, 6 sighting(s), conf 0.99
+   cube 2: map (+1.02, +0.73) height 0.050 m, 5 sighting(s), conf 0.77
+   cube 4: map (-0.95, +1.27) height 0.043 m, 5 sighting(s), conf 0.80
+   cube 5: map (-0.87, +0.82) height 0.033 m, 7 sighting(s), conf 0.99
+   cube 6: map (-1.43, +0.25) height 0.035 m, 2 sighting(s), conf 0.54
+   cube 7: map (-0.80, -0.69) height 0.033 m, 12 sighting(s), conf 0.99
+   cube 8: map (-0.26, -0.33) height 0.026 m, 9 sighting(s), conf 0.99
+   cube 9: map (-1.37, -0.32) height 0.030 m, 3 sighting(s), conf 0.43
+   cube 10: map (-1.39, -1.62) height 0.039 m, 3 sighting(s), conf 0.83
+   cube 11: map (-0.82, -1.83) height 0.053 m, 7 sighting(s), conf 0.98
+   cube 12: map (+0.38, -1.98) height 0.016 m, 3 sighting(s), conf 0.94
+   cube 14: map (+0.60, -1.36) height 0.171 m, 2 sighting(s), conf 0.62

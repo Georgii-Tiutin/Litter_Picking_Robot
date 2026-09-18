@@ -1,0 +1,80 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+waiting for map, camera and TF ...
+   map      ok
+   colour   ok
+   depth    ok
+   pose     ok
+map 105x137, 5609 free cells, 2160 safe-to-stand, 6 waypoints at 1.15 m spacing
+
+scanning from the starting position first
+       step 1/8: 2 detection(s), 1 candidate(s), 1 confirmed
+       step 5/8: 1 detection(s), 2 candidate(s), 1 confirmed
+       step 6/8: 2 detection(s), 3 candidate(s), 2 confirmed
+       step 7/8: 1 detection(s), 3 candidate(s), 3 confirmed
+       step 8/8: 1 detection(s), 4 candidate(s), 3 confirmed
+
+[2/6] waypoint (-0.97,+0.73)  batt 12.12 V
+       path ok (51 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 2 detection(s), 6 candidate(s), 3 confirmed
+       step 5/8: 1 detection(s), 7 candidate(s), 3 confirmed
+       step 6/8: 1 detection(s), 8 candidate(s), 3 confirmed
+       step 7/8: 1 detection(s), 8 candidate(s), 4 confirmed
+
+[3/6] waypoint (+0.18,+0.73)  batt 12.09 V
+       path ok (49 poses, 4% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 9 candidate(s), 4 confirmed
+       step 5/8: 1 detection(s), 9 candidate(s), 5 confirmed
+       step 6/8: 1 detection(s), 9 candidate(s), 5 confirmed
+       step 7/8: 2 detection(s), 11 candidate(s), 5 confirmed
+       step 8/8: 2 detection(s), 11 candidate(s), 7 confirmed
+
+[4/6] waypoint (-0.97,-1.57)  batt 12.10 V
+       path ok (103 poses, 0% inscribed)
+       SUCCEEDED
+       step 2/8: 2 detection(s), 11 candidate(s), 7 confirmed
+       step 3/8: 2 detection(s), 11 candidate(s), 7 confirmed
+       step 4/8: 1 detection(s), 11 candidate(s), 7 confirmed
+       step 5/8: 1 detection(s), 11 candidate(s), 7 confirmed
+       step 6/8: 1 detection(s), 11 candidate(s), 7 confirmed
+       step 7/8: 2 detection(s), 12 candidate(s), 7 confirmed
+       step 8/8: 2 detection(s), 12 candidate(s), 8 confirmed
+
+[5/6] waypoint (+0.18,-1.57)  batt 12.05 V
+       path ok (46 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 1 detection(s), 13 candidate(s), 8 confirmed
+       step 2/8: 1 detection(s), 13 candidate(s), 9 confirmed
+       step 3/8: 2 detection(s), 14 candidate(s), 9 confirmed
+       step 4/8: 3 detection(s), 14 candidate(s), 9 confirmed
+       step 5/8: 3 detection(s), 15 candidate(s), 9 confirmed
+       step 6/8: 2 detection(s), 15 candidate(s), 10 confirmed
+       step 7/8: 1 detection(s), 15 candidate(s), 10 confirmed
+
+[6/6] waypoint (+0.18,-0.42)  batt 12.04 V
+       path ok (50 poses, 0% inscribed)
+       SUCCEEDED
+       step 1/8: 2 detection(s), 16 candidate(s), 11 confirmed
+       step 2/8: 1 detection(s), 16 candidate(s), 12 confirmed
+       step 3/8: 1 detection(s), 16 candidate(s), 12 confirmed
+       step 4/8: 2 detection(s), 16 candidate(s), 12 confirmed
+       step 5/8: 4 detection(s), 16 candidate(s), 12 confirmed
+       step 6/8: 2 detection(s), 16 candidate(s), 12 confirmed
+       step 7/8: 1 detection(s), 16 candidate(s), 12 confirmed
+       step 8/8: 1 detection(s), 16 candidate(s), 13 confirmed
+
+=== mission over: 5 waypoints reached, 0 abandoned, 284 s ===
+=== 11 cube(s) found ===
+   cube 1: map (-0.76, +0.65) height 0.020 m, 2 sighting(s), conf 0.88
+   cube 2: map (-0.79, -1.88) height 0.020 m, 10 sighting(s), conf 0.96
+   cube 3: map (+0.26, -2.00) height 0.020 m, 6 sighting(s), conf 0.95
+   cube 4: map (-0.26, -0.30) height 0.020 m, 10 sighting(s), conf 0.94
+   cube 5: map (-0.88, +1.12) height 0.020 m, 3 sighting(s), conf 0.68
+   cube 8: map (-0.84, -0.67) height 0.020 m, 14 sighting(s), conf 0.95
+   cube 9: map (+0.95, +0.79) height 0.020 m, 2 sighting(s), conf 0.91
+   cube 10: map (+0.58, -1.26) height 0.170 m, 2 sighting(s), conf 0.41
+   cube 11: map (+0.83, -0.69) height 0.193 m, 2 sighting(s), conf 0.87
+   cube 12: map (-1.32, -1.66) height 0.020 m, 2 sighting(s), conf 0.52
+   cube 13: map (+0.40, +0.80) height 0.020 m, 2 sighting(s), conf 0.94
