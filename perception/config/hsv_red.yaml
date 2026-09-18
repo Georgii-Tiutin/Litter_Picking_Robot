@@ -1,0 +1,12 @@
+aspect_max_x10: 17
+aspect_min_x10: 15
+h_high_1: 13
+h_high_2: 179
+h_low_1: 0
+h_low_2: 127
+min_area: 500
+morph_kernel: 5
+s_max: 255
+s_min: 38
+v_max: 255
+v_min: 0

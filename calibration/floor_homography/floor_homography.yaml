@@ -1,0 +1,22 @@
+H:
+- - 0.0007912588583128397
+  - -0.001164244243407709
+  - 0.6095964275720867
+- - -0.0011208113989584442
+  - 4.871473424001428e-05
+  - 0.3685083675053239
+- - 0.004431362894727991
+  - 0.0012739353717300488
+  - 0.9999999999999999
+frame: arm_base_ground (X fwd, Y left, metres)
+note: pixel(u,v)=bbox bottom-centre -> floor(X,Y). Valid ONLY at the fixed observation
+  pose.
+obs_pose_joints:
+- 90
+- 100
+- 0
+- 0
+- 90
+- 0
+reproj_err_mm_max: 1.4984313226944446
+reproj_err_mm_mean: 1.0188486688094074
