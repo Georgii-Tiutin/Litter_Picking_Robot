@@ -1,0 +1,73 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+11 floor cube(s) to collect; drop zone at (-0.075,-1.175)
+
+=== [1/11] cube #2 at (-0.26,-0.31)  batt 11.22 V ===
+   localisation: scan-to-map median miss 0.109 m -> ok
+   already 0.152 m from the approach pose - turning 112 deg in place
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [2/11] cube #1 at (-0.82,-0.68)  batt 11.19 V ===
+   localisation: scan-to-map median miss 0.055 m -> ok
+   already 0.098 m from the approach pose - turning -114 deg in place
+   confirmed at (-0.857,-0.658) from 3 sighting(s)
+   cube is 0.585 m away, -18 deg off the nose
+   refined at 0.420 m: cube now (-0.962,-0.729), moved 0.127 m
+   final stand-off 0.138 m (arm reaches 0.15-0.24 m at grip height)
+      |     above=[112, 41, 33, 16, 15]  grip=[112, 13, 35, 42, 15]
+      | === 8. verify (return to observation pose and re-look) ===
+      |     no cube on the floor -> GRASP SUCCEEDED
+   grasped; raising joint2 120 -> 150 via /arm_joint (gripper untouched)
+   to drop zone: SUCCEEDED
+      |    pitch 1.4500  above=[90, 38, 48, 12, 90] (0.0 mm)  down=[90, 20, 38, 39, 90] (0.0 mm)
+      | PLACED and returned to NAV_POSE
+   PLACED in the zone
+
+=== [3/11] cube #10 at (-1.37,-0.32)  batt 11.15 V ===
+   localisation: scan-to-map median miss 0.066 m -> ok
+   approach: SUCCEEDED
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [4/11] cube #11 at (-1.43,+0.25)  batt 11.13 V ===
+   localisation: scan-to-map median miss 0.151 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.064 m
+      | LOCALISED - the robot knows where it is
+   localisation: scan-to-map median miss 0.060 m -> ok
+   approach: SUCCEEDED
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [5/11] cube #4 at (-0.85,+0.78)  batt 11.14 V ===
+   localisation: scan-to-map median miss 0.328 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.089 m
+      | LOCALISED - the robot knows where it is
+   localisation: scan-to-map median miss 0.086 m -> ok
+   approach: SUCCEEDED
+   confirmed at (-0.880,+0.946) from 3 sighting(s)
+   cube is 0.717 m away, -0 deg off the nose
+   could not re-measure at 0.42 m - using the earlier estimate
+   final stand-off 0.608 m (arm reaches 0.15-0.24 m at grip height)
+      |     end-effector at (0.1459, 0.0002, 0.1857)  pitch 1.0472 rad (60.0 deg)
+      | === 3. detect cube (best.pt, depth-segmented, multi-frame) ===
+      | NO CUBE FOUND
+   GRASP FAILED
+
+=== [6/11] cube #6 at (+0.27,+0.84)  batt 11.07 V ===
+   localisation: scan-to-map median miss 0.160 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.069 m
+      | LOCALISED - the robot knows where it is
+   localisation: scan-to-map median miss 0.068 m -> ok
+   approach: SUCCEEDED
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== [7/11] cube #7 at (-0.92,+1.21)  batt 11.06 V ===
+   localisation: scan-to-map median miss 0.187 m -> BAD
+   re-localising (global scatter + in-place rotation) ...
+      | median miss 0.103 m
+      | LOCALISED - the robot knows where it is
+   localisation: scan-to-map median miss 0.103 m -> ok
+   approach: SUCCEEDED
+   confirmed at (-0.904,+1.260) from 3 sighting(s)
+   cube is 0.644 m away, -2 deg off the nose

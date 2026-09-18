@@ -1,0 +1,10 @@
+map 105x137, 5609 free cells, 8776 blocked (walls + unknown), 6 floor cubes
+centre of mapped floor: (-0.55, -0.29)
+
+clearest 15x15 cm patch: (-1.275, +0.425)
+   nearest wall / unknown / cube: 0.770 m
+   the 15 cm box needs 0.106 m of half-diagonal, so it fits with 0.664 m to spare
+   nearest detected cube: 1.064 m
+   robot can stand at (-0.82,+0.43) [0 deg], path of 86 poses
+
+publishing the zone on /dropzone - add a MarkerArray display for it in RViz

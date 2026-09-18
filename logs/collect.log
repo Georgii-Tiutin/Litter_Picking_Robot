@@ -1,0 +1,21 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+11 floor cube(s) to collect; drop zone at (-0.075,-1.175)
+
+=== [1/1] cube #2 at (-0.26,-0.31)  batt 11.29 V ===
+   localisation: scan-to-map median miss 0.065 m -> ok
+   already 0.079 m from the approach pose - turning 68 deg in place
+   NOTHING THERE in 8 good look(s) -> false positive
+
+=== collected 0, false positives 1, failed 0 ===
+   #1  (-0.82,-0.68)  pending
+   #2  (-0.26,-0.31)  false
+   #3  (-0.80,-1.86)  pending
+   #4  (-0.85,+0.78)  pending
+   #5  (+0.30,-1.99)  pending
+   #6  (+0.27,+0.84)  pending
+   #7  (-0.92,+1.21)  pending
+   #8  (+1.00,+0.75)  pending
+   #9  (-1.36,-1.64)  pending
+   #10 (-1.37,-0.32)  pending
+   #11 (-1.43,+0.25)  pending
