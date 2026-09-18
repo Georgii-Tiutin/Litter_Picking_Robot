@@ -346,6 +346,21 @@ def main():
     theta=math.degrees(math.atan2(gy,gx))
     # jaw = theta + (j5 - 90);  want jaw == short_ang  ->  j5 = 90 + short_ang - theta
     j5=(90.0+f["short_ang"]-theta)%180.0
+    # The jaws must close along a FACE. For a SQUARE footprint both short_ang and
+    # short_ang+90 are faces, so j5 and j5+90 are equally valid - but they are not equally
+    # forgiving: a heavily rotated wrist sweeps a wider arc and needs the cube well inside
+    # the reachable zone, while a near-straight wrist tolerates it sitting slightly outside.
+    # So for a square, keep the face alignment and take the representative nearer 90 deg.
+    #
+    # NOT the same as forcing j5=90, which was tried on 2026-09-15 and was WRONG: it ignores
+    # orientation entirely, and a 45 deg misalignment on a 40 mm square spans
+    # 40*(|cos45|+|sin45|) = 57 mm, tripping the 45 mm span guard. The guard caught it.
+    if ratio > SQUARE_RATIO:
+        alt=(j5+90.0)%180.0
+        if abs(alt-90.0) < abs(j5-90.0):
+            print("    square footprint (aspect %.2f): both %d and %d align with a face,"
+                  " taking the straighter wrist"%(ratio,int(round(j5)),int(round(alt))))
+            j5=alt
     if j5>180: j5-=180
     j5=int(round(j5))
     if J5_FORCE is not None:

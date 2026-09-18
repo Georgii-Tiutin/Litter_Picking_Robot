@@ -1,0 +1,38 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+parking the arm at the observation pose [90, 120, 0, 0, 90, 30]
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 1: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.487,-0.059) r=0.490 m  lat -0.059  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.487,-0.058) r=0.491 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 5] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 6] cube base (+0.485,-0.058) r=0.489 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 7] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 8] cube base (+0.486,-0.058) r=0.489 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [ 9] cube base (+0.487,-0.058) r=0.491 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [10] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [11] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [12] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [13] cube base (+0.487,-0.058) r=0.491 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [14] cube base (+0.485,-0.058) r=0.489 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [15] cube base (+0.485,-0.057) r=0.489 m  lat -0.057  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [16] cube base (+0.485,-0.058) r=0.489 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [17] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [18] cube base (+0.485,-0.058) r=0.489 m  lat -0.058  conf 0.97  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [19] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [20] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [21] cube base (+0.485,-0.057) r=0.489 m  lat -0.057  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [22] cube base (+0.487,-0.058) r=0.491 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [23] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [24] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [25] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [26] cube base (+0.487,-0.059) r=0.490 m  lat -0.059  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [27] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [28] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.96  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [29] cube base (+0.487,-0.058) r=0.490 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   [30] cube base (+0.487,-0.058) r=0.491 m  lat -0.058  conf 0.95  j5~97(est)  want r 0.185-0.210 |y|<0.015 
+   could not bring the cube into the zone; stopping best.pt anyway

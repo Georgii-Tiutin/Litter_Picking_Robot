@@ -1,0 +1,61 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+parking the arm at the observation pose [90, 120, 0, 0, 90, 30]
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 1: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.195,-0.008) r=0.195 m  lateral -0.008 m  conf 0.91  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      |     pitch 1.3000 (74.5 deg): above ok 0.00mm  grip ok 0.00mm
+      |     pitch 1.1500 (65.9 deg): above REJECT 71.5mm  grip REJECT 48.1mm
+      |     using pitch 1.4500  above=[88, 42, 38, 17, 92]  grip=[88, 15, 35, 47, 92]
+      | === 7. reach and grasp ===
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 2: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.266,-0.014) r=0.266 m  lateral -0.014 m  conf 0.92  
+   [ 2] cube base (+0.233,-0.013) r=0.233 m  lateral -0.013 m  conf 0.88  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      |     vendor joint5 = 95  (from gripper_joint -84.3, servo j1 89)
+      |     above=[89, 45, 24, 45, 95]  grip=[89, 12, 30, 73, 95]
+      | === 8. verify (return to observation pose and re-look) ===
+      |     no cube on the floor -> GRASP SUCCEEDED
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 3: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.269,-0.014) r=0.269 m  lateral -0.014 m  conf 0.87  
+   [ 2] cube base (+0.220,-0.013) r=0.220 m  lateral -0.013 m  conf 0.90  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      |     vendor joint5 = 91  (from gripper_joint -85.8, servo j1 90)
+      |     above=[90, 40, 39, 26, 91]  grip=[90, 12, 39, 55, 91]
+      | === 8. verify (return to observation pose and re-look) ===
+      |     no cube on the floor -> GRASP SUCCEEDED
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 4: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.275,-0.016) r=0.275 m  lateral -0.016 m  conf 0.91  
+   [ 2] cube base (+0.215,-0.015) r=0.216 m  lateral -0.015 m  conf 0.89  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      |     pitch 1.3000 (74.5 deg): above ok 0.00mm  grip ok 0.00mm
+      |     pitch 1.1500 (65.9 deg): above ok 0.00mm  grip ok 0.00mm
+      |     using pitch 1.3000  above=[90, 44, 32, 29, 90]  grip=[90, 14, 32, 59, 90]
+      | === 7. reach and grasp ===
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 5: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.296,-0.021) r=0.297 m  lateral -0.021 m  conf 0.90  
+   [ 2] cube base (+0.221,-0.019) r=0.222 m  lateral -0.019 m  conf 0.83  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp

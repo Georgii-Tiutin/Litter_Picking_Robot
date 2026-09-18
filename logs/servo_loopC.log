@@ -1,0 +1,252 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+parking the arm at the observation pose [90, 120, 0, 0, 90, 30]
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 1: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.219,+0.014) r=0.219 m  lat +0.014  conf 0.97  j5~86(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.198,+0.016) r=0.199 m  lat +0.016  conf 0.99  j5~86(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.203,+0.017) r=0.204 m  lat +0.017  conf 0.98  j5~85(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.205,+0.014) r=0.205 m  lat +0.014  conf 0.97  j5~86(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 8.4 deg  short_ang 55.1 deg  -> j5 47  (vendor would say 47)
+      > jaw axis 145.4 deg, misaligned -89.7 deg -> jaws must span 42 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 2: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.280,-0.025) r=0.281 m  lat -0.025  conf 0.83  j5~98(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.285,-0.011) r=0.285 m  lat -0.011  conf 0.91  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.190,-0.010) r=0.191 m  lat -0.010  conf 0.93  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      | footprint aspect       : 0.97 (short 40 / long 41 mm)
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 3: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.286,-0.013) r=0.287 m  lat -0.013  conf 0.98  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.195,-0.011) r=0.195 m  lat -0.011  conf 0.94  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.4 deg  short_ang 2.0 deg  -> j5 91  (vendor would say 92)
+      > jaw axis 2.4 deg, misaligned 0.5 deg -> jaws must span 38 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 4: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.293,-0.024) r=0.294 m  lat -0.024  conf 0.93  j5~95(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.287,-0.009) r=0.287 m  lat -0.009  conf 0.96  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.188,-0.009) r=0.189 m  lat -0.009  conf 0.95  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      | footprint aspect       : 0.97 (short 40 / long 41 mm)
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 5: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.288,-0.013) r=0.288 m  lat -0.013  conf 0.95  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.193,-0.011) r=0.194 m  lat -0.011  conf 0.95  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 2.0 deg  short_ang 54.5 deg  -> j5 53  (vendor would say 133)
+      > jaw axis 145.0 deg, misaligned -89.6 deg -> jaws must span 42 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 6: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.294,-0.023) r=0.295 m  lat -0.023  conf 0.94  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.288,-0.009) r=0.288 m  lat -0.009  conf 0.96  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.190,-0.007) r=0.190 m  lat -0.007  conf 0.94  j5~92(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      | footprint aspect       : 0.99 (short 39 / long 39 mm)
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 7: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.282,-0.009) r=0.283 m  lat -0.009  conf 0.91  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.198,-0.010) r=0.198 m  lat -0.010  conf 0.93  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 2.5 deg  short_ang 1.5 deg  -> j5 89  (vendor would say 93)
+      > jaw axis 1.5 deg, misaligned 0.0 deg -> jaws must span 39 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 8: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.290,-0.021) r=0.291 m  lat -0.021  conf 0.96  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.295,-0.017) r=0.295 m  lat -0.017  conf 0.90  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.281,-0.016) r=0.281 m  lat -0.016  conf 0.86  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.287,-0.012) r=0.287 m  lat -0.012  conf 0.96  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 5] cube base (+0.192,-0.013) r=0.193 m  lat -0.013  conf 0.96  j5~94(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.5 deg  short_ang 1.1 deg  -> j5 90  (vendor would say 92)
+      > jaw axis 1.5 deg, misaligned 0.4 deg -> jaws must span 39 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 9: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.287,-0.021) r=0.288 m  lat -0.021  conf 0.92  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.293,-0.014) r=0.293 m  lat -0.014  conf 0.91  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.195,-0.013) r=0.195 m  lat -0.013  conf 0.95  j5~94(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      | footprint aspect       : 0.98 (short 37 / long 38 mm)
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 10: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.298,-0.020) r=0.298 m  lat -0.020  conf 0.91  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.282,-0.013) r=0.282 m  lat -0.013  conf 0.85  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.201,-0.011) r=0.201 m  lat -0.011  conf 0.96  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.7 deg  short_ang 4.9 deg  -> j5 93  (vendor would say 92)
+      > jaw axis 4.7 deg, misaligned -0.1 deg -> jaws must span 40 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 11: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.296,-0.016) r=0.297 m  lat -0.016  conf 0.93  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.283,-0.018) r=0.283 m  lat -0.018  conf 0.90  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.283,-0.012) r=0.284 m  lat -0.012  conf 0.78  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.193,-0.006) r=0.193 m  lat -0.006  conf 0.97  j5~92(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 3.4 deg  short_ang 12.2 deg  -> j5 99  (vendor would say 80)
+      > jaw axis 12.4 deg, misaligned 0.2 deg -> jaws must span 41 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 12: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.287,-0.017) r=0.287 m  lat -0.017  conf 0.91  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.293,-0.016) r=0.293 m  lat -0.016  conf 0.85  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.288,-0.017) r=0.289 m  lat -0.017  conf 0.87  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.286,-0.017) r=0.286 m  lat -0.017  conf 0.92  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 5] cube base (+0.284,-0.010) r=0.284 m  lat -0.010  conf 0.93  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 6] cube base (+0.193,-0.009) r=0.194 m  lat -0.009  conf 0.97  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 2.6 deg  short_ang 10.4 deg  -> j5 98  (vendor would say 82)
+      > jaw axis 10.6 deg, misaligned 0.2 deg -> jaws must span 41 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 13: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.280,-0.020) r=0.280 m  lat -0.020  conf 0.91  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.282,-0.016) r=0.282 m  lat -0.016  conf 0.90  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.285,-0.009) r=0.285 m  lat -0.009  conf 0.93  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.191,-0.009) r=0.191 m  lat -0.009  conf 0.95  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 2.8 deg  short_ang 10.2 deg  -> j5 97  (vendor would say 85)
+      > jaw axis 9.8 deg, misaligned -0.4 deg -> jaws must span 41 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 14: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.282,-0.016) r=0.283 m  lat -0.016  conf 0.94  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.278,-0.014) r=0.279 m  lat -0.014  conf 0.93  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.195,-0.012) r=0.196 m  lat -0.012  conf 0.98  j5~94(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 0.9 deg  short_ang 18.8 deg  -> j5 108  (vendor would say 70)
+      > jaw axis 18.9 deg, misaligned 0.1 deg -> jaws must span 40 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 15: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.289,-0.010) r=0.289 m  lat -0.010  conf 0.94  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.202,-0.008) r=0.202 m  lat -0.008  conf 0.98  j5~92(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      | footprint aspect       : 0.99 (short 41 / long 42 mm)
+      | bearing 2.2 deg  short_ang 23.8 deg  -> j5 112  (vendor would say 65)
+      | jaw axis 24.2 deg, misaligned 0.3 deg -> jaws must span 42 mm
+      | cube still at the same place (13 mm away) -> GRASP FAILED
+      > bearing 2.2 deg  short_ang 23.8 deg  -> j5 112  (vendor would say 65)
+      > jaw axis 24.2 deg, misaligned 0.3 deg -> jaws must span 42 mm
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 16: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.304,-0.016) r=0.304 m  lat -0.016  conf 0.94  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.301,-0.013) r=0.301 m  lat -0.013  conf 0.96  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.206,-0.011) r=0.207 m  lat -0.011  conf 0.97  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.3 deg  short_ang 33.3 deg  -> j5 122  (vendor would say 59)
+      > jaw axis 33.3 deg, misaligned -0.0 deg -> jaws must span 40 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 17: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.295,-0.016) r=0.295 m  lat -0.016  conf 0.92  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.281,-0.012) r=0.281 m  lat -0.012  conf 0.97  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.201,-0.010) r=0.201 m  lat -0.010  conf 0.95  j5~93(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.0 deg  short_ang 85.6 deg  -> j5 85  (vendor would say 91)
+      > jaw axis 176.0 deg, misaligned -89.6 deg -> jaws must span 40 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 18: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.286,-0.022) r=0.286 m  lat -0.022  conf 0.96  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.281,-0.011) r=0.282 m  lat -0.011  conf 0.92  j5~92(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.203,-0.008) r=0.203 m  lat -0.008  conf 0.94  j5~88(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.6 deg  short_ang 83.4 deg  -> j5 82  (vendor would say 99)
+      > jaw axis 173.6 deg, misaligned -89.9 deg -> jaws must span 41 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 19: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.278,-0.016) r=0.278 m  lat -0.016  conf 0.91  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.275,-0.013) r=0.276 m  lat -0.013  conf 0.92  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.194,-0.014) r=0.195 m  lat -0.014  conf 0.96  j5~94(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 0.3 deg  short_ang 83.4 deg  -> j5 83  (vendor would say 94)
+      > jaw axis 173.3 deg, misaligned 89.9 deg -> jaws must span 40 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 20: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.281,-0.016) r=0.282 m  lat -0.016  conf 0.94  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 2] cube base (+0.278,-0.016) r=0.278 m  lat -0.016  conf 0.92  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 3] cube base (+0.276,-0.016) r=0.276 m  lat -0.016  conf 0.94  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 4] cube base (+0.274,-0.015) r=0.275 m  lat -0.015  conf 0.90  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 5] cube base (+0.274,-0.017) r=0.274 m  lat -0.017  conf 0.87  j5~94(est)  want r 0.185-0.210 |y|<0.015 
+   [ 6] cube base (+0.271,-0.012) r=0.272 m  lat -0.012  conf 0.96  j5~93(est)  want r 0.185-0.210 |y|<0.015 
+   [ 7] cube base (+0.200,-0.009) r=0.200 m  lat -0.009  conf 0.94  j5~91(est)  want r 0.185-0.210 |y|<0.015 CENTRED
+   cube is in the reachable zone - handing over to the grasp
+      > bearing 1.3 deg  short_ang 83.0 deg  -> j5 82  (vendor would say 95)
+      > jaw axis 173.3 deg, misaligned -89.7 deg -> jaws must span 41 mm
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad

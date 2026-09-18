@@ -1,0 +1,129 @@
+/usr/local/lib/python3.10/dist-packages/matplotlib/projections/__init__.py:63: UserWarning: Unable to import Axes3D. This may be due to multiple versions of Matplotlib being installed (e.g. as a system package and as a pip package). As a result, the 3D projection is not available.
+  warnings.warn("Unable to import Axes3D. This may be due to multiple versions of "
+parking the arm at the observation pose [90, 120, 0, 0, 90, 30]
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 1: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] no cube in view
+   [ 2] no cube in view
+   [ 3] no cube in view
+   [ 4] no cube in view
+   [ 5] no cube in view
+   [ 6] no cube in view
+   [ 7] no cube in view
+   [ 8] cube base (+0.170,-0.024) r=0.172 m  lateral -0.024 m  conf 0.85  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | above=[94, 47, 30, 13, 100]  grip=[94, 18, 27, 45, 100]
+      | === 8. verify (return to observation pose and re-look) ===
+      | no cube on the floor -> GRASP SUCCEEDED
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 2: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.269,-0.019) r=0.270 m  lateral -0.019 m  conf 0.66  
+   [ 2] cube base (+0.211,-0.018) r=0.212 m  lateral -0.018 m  conf 0.87  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | pitch 1.5708 (90.0 deg): above REJECT 23.8mm  grip REJECT 51.3mm
+      | pitch 1.4500 (83.1 deg): above REJECT 17.8mm  grip ok 2.06mm
+      | pitch 1.3000 (74.5 deg): above ok 0.00mm  grip ok 0.00mm
+      | pitch 1.1500 (65.9 deg): above REJECT 8.0mm  grip ok 0.00mm
+      | using pitch 1.3000  above=[91, 48, 26, 32, 89]  grip=[91, 17, 25, 63, 89]
+      | === 7. reach and grasp ===
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 3: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.293,-0.021) r=0.293 m  lateral -0.021 m  conf 0.77  
+   [ 2] cube base (+0.219,-0.020) r=0.219 m  lateral -0.020 m  conf 0.87  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | cube still at the same place (14 mm away) -> GRASP FAILED
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 4: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.271,-0.049) r=0.276 m  lateral -0.049 m  conf 0.96  
+   [ 2] cube base (+0.211,-0.046) r=0.216 m  lateral -0.046 m  conf 0.96  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | cube still at the same place (10 mm away) -> GRASP FAILED
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 5: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.286,-0.056) r=0.291 m  lateral -0.056 m  conf 0.93  
+   [ 2] cube base (+0.213,-0.053) r=0.220 m  lateral -0.053 m  conf 0.95  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | cube still at the same place (5 mm away) -> GRASP FAILED
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 6: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.288,-0.060) r=0.294 m  lateral -0.060 m  conf 0.95  
+   [ 2] cube base (+0.215,-0.058) r=0.223 m  lateral -0.058 m  conf 0.97  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | opening the claw before approaching
+      | === 8. verify (return to observation pose and re-look) ===
+      | no cube on the floor -> GRASP SUCCEEDED
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 7: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.276,-0.022) r=0.277 m  lateral -0.022 m  conf 0.89  
+   [ 2] cube base (+0.209,-0.020) r=0.210 m  lateral -0.020 m  conf 0.94  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | opening the claw before approaching
+      | === 8. verify (return to observation pose and re-look) ===
+      | no cube on the floor -> GRASP SUCCEEDED
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 8: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.285,-0.020) r=0.286 m  lateral -0.020 m  conf 0.88  
+   [ 2] cube base (+0.207,-0.017) r=0.207 m  lateral -0.017 m  conf 0.91  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | opening the claw before approaching
+      | === 8. verify (return to observation pose and re-look) ===
+      | no cube on the floor -> GRASP SUCCEEDED
+   grasp SUCCEEDED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 9: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.293,-0.026) r=0.294 m  lateral -0.026 m  conf 0.94  
+   [ 2] cube base (+0.214,-0.022) r=0.215 m  lateral -0.022 m  conf 0.94  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | cube still at the same place (15 mm away) -> GRASP FAILED
+   grasp FAILED
+   place failed
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 10: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.295,-0.035) r=0.297 m  lateral -0.035 m  conf 0.94  
+   [ 2] cube base (+0.217,-0.033) r=0.219 m  lateral -0.033 m  conf 0.93  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
+      | cube still at the same place (16 mm away) -> GRASP FAILED
+   grasp FAILED
+   placed back down for the next round
+   FK end-effector (0.1459, 0.0002, 0.1857) pitch 1.047 rad
+
+=== round 11: servo the cube into the reachable zone ===
+   zone: 0.150 < r < 0.245 m and |y| < 0.10 m
+   [ 1] cube base (+0.293,-0.022) r=0.294 m  lateral -0.022 m  conf 0.91  
+   [ 2] cube base (+0.220,-0.020) r=0.220 m  lateral -0.020 m  conf 0.91  INSIDE THE ZONE
+   cube is in the reachable zone - handing over to the grasp
