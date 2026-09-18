@@ -13,4 +13,10 @@ The actual modules live on dedicated branches:
 - **`navigation`** — LiDAR mapping / navigation plan and the arm-sweep floor-mapping scripts
 - **`arm-grasping`** — cuboid pose detection, wrist alignment, drive-up and grasp scripts, with the grasp plan and the record of what worked on the robot
 
+After the project reboot on 2026-08-26:
+
+- **`manual-courses`** — robot config backups and every patch made to Yahboom's demo code while working through the manual (chassis, LiDAR, depth camera, arm courses), stored as diffs
+- **`arm-camera-calibration`** — overhead-camera calibration of the arm and its error budget (2026-09-09/10)
+- **`sorter`** — the sweep-and-collect mission: mapping, localisation, cube patrol and tracking, grasping, collect-and-place (2026-09-10 to 09-16)
+
 `PROJECT_PLAN.md` is the cuboid detection and grasping plan. `tools/` has the battery-check and arm-calibration utilities. `DATA_MANIFEST.md` lists the datasets, renders and videos that are kept locally rather than on GitHub.
