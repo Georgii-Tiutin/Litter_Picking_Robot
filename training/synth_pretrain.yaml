@@ -1,0 +1,11 @@
+# Stage-1 (pretrain) data: ALL synthetic in TRAIN; real held-out videos as VAL
+# so we can pick the synth checkpoint that transfers best to real.
+# Labels found by swapping /images/ -> /labels/ (Ultralytics convention).
+path: /Users/georgiitiutin/ProjectsRoot/Making Data
+train:
+  - synth/rooms_aabb/images     # ~2000 realistic-room renders (OBB->AABB)
+  - synth/output/images         # ~2000 old abstract renders (additive)
+val: dataset/images/val         # 80 real frames, held-out (never synthetic)
+nc: 1
+names:
+  0: cuboid

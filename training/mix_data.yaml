@@ -1,0 +1,10 @@
+# Mixed dataset: synthetic + real in TRAIN; real held-out videos only in VAL.
+# Label files are found by swapping /images/ -> /labels/ per Ultralytics convention.
+path: /Users/georgiitiutin/ProjectsRoot/Making Data
+train:
+  - dataset/images/train      # 245 real frames (from CVAT)
+  - synth/output/images       # ~2000 synthetic renders
+val: dataset/images/val       # 80 real frames, held-out videos (never synthetic)
+nc: 1
+names:
+  0: cuboid
