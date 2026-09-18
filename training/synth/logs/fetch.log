@@ -1,0 +1,184 @@
+[hdris] fetching up to 30 indoor HDRIs @ 1k
+  [1/30] abandoned_bakery skip
+  [2/30] abandoned_construction skip
+  [3/30] abandoned_factory_canteen_01 ok
+  [4/30] abandoned_factory_canteen_02 ok
+  [5/30] abandoned_games_room_01 ok
+  [6/30] abandoned_games_room_02 ok
+  [7/30] abandoned_garage ok
+  [8/30] abandoned_greenhouse ok
+  [9/30] abandoned_hall_01 ok
+  [10/30] abandoned_tiled_room ok
+  [11/30] abandoned_workshop ok
+  [12/30] abandoned_workshop_02 ok
+  [13/30] acoustical_shell ok
+  [14/30] adams_place_bridge ok
+  [15/30] aerodynamics_workshop ok
+  [16/30] afrikaans_church_interior ok
+  [17/30] aft_lounge ok
+  [18/30] aircraft_workshop_01 ok
+  [19/30] anniversary_lounge ok
+  [20/30] art_studio ok
+  [21/30] artist_workshop ok
+  [22/30] auto_service ok
+  [23/30] autoshop_01 ok
+  [24/30] ballroom ok
+  [25/30] bank_vault ok
+  [26/30] basement_boxing_ring ok
+  [27/30] bathroom ok
+  [28/30] bell_tower ok
+  [29/30] billiard_hall ok
+  [30/30] birbeck_street_underpass ok
+[floors] fetching up to 30 floor textures @ 1k
+  [1/30] aerial_asphalt_01: Diffuse+nor_gl+Rough+Displacement+arm
+  [2/30] anti_skid_tiles: Diffuse+nor_gl+Rough+Displacement+arm
+  [3/30] anti_slip_concrete: Diffuse+nor_gl+Rough+Displacement+arm
+  [4/30] asphalt_01: Diffuse+nor_gl+Rough+Displacement+arm
+  [5/30] asphalt_02: Diffuse+nor_gl+Rough+Displacement+arm
+  [6/30] asphalt_05: Diffuse+nor_gl+Rough+Displacement+arm
+  [7/30] asphalt_06: Diffuse+nor_gl+Rough+Displacement+arm
+  [8/30] asphalt_07: Diffuse+nor_gl+Rough+Displacement+arm
+  [9/30] asphalt_floor: Diffuse+nor_gl+Rough+Displacement+arm
+  [10/30] asphalt_pit_lane: Diffuse+nor_gl+Rough+Displacement+arm
+  [11/30] bicolour_gravel: Diffuse+nor_gl+Rough+Displacement+arm
+  [12/30] blue_floor_tiles_01: Diffuse+nor_gl+Rough+Displacement+arm
+  [13/30] brick_crosswalk: Diffuse+nor_gl+Rough+Displacement+arm
+  [14/30] brick_floor: Diffuse+nor_gl+Rough+Displacement+arm
+  [15/30] brick_floor_003: Diffuse+nor_gl+Rough+Displacement+arm
+  [16/30] brick_floor_02: Diffuse+nor_gl+Rough+Displacement+arm
+  [17/30] brick_moss_001: Diffuse+nor_gl+Rough+Displacement+arm
+  [18/30] brick_pavement_02: Diffuse+nor_gl+Rough+Displacement+arm
+  [19/30] brick_pavement_03: Diffuse+nor_gl+Rough+Displacement+arm
+  [20/30] brick_villa_floor: Diffuse+nor_gl+Rough+Displacement+arm
+  [21/30] brown_floor_tiles: Diffuse+nor_gl+Rough+Displacement+arm
+  [22/30] brushed_concrete: Diffuse+nor_gl+Rough+Displacement+arm
+  [23/30] brushed_concrete_03: Diffuse+nor_gl+Rough+Displacement+arm
+  [24/30] brushed_concrete_2: Diffuse+nor_gl+Rough+Displacement+arm
+  [25/30] checkered_pavement_tiles: Diffuse+nor_gl+Rough+Displacement+arm
+  [26/30] chipped_concrete: Diffuse+nor_gl+Rough+Displacement+arm
+  [27/30] clay_floor_001: Diffuse+nor_gl+Rough+Displacement+arm
+  [28/30] clean_asphalt: Diffuse+nor_gl+Rough+Displacement+arm
+  [29/30] cobblestone_01: Diffuse+nor_gl+Rough+Displacement+arm
+  [30/30] cobblestone_02: Diffuse+nor_gl+Rough+Displacement+arm
+[models] fetching up to 120 models @ 1k (glTF)
+  [1/120] ArmChair_01: 5 file(s) -> ArmChair_01_1k.gltf
+  [2/120] BarberShopChair_01: 5 file(s) -> BarberShopChair_01_1k.gltf
+  [3/120] ClassicConsole_01: 5 file(s) -> ClassicConsole_01_1k.gltf
+  [4/120] ClassicNightstand_01: 5 file(s) -> ClassicNightstand_01_1k.gltf
+  [5/120] CoffeeCart_01: 8 file(s) -> CoffeeCart_01_1k.gltf
+  [6/120] CoffeeTable_01: 5 file(s) -> CoffeeTable_01_1k.gltf
+  [7/120] GothicBed_01: 5 file(s) -> GothicBed_01_1k.gltf
+  [8/120] GothicCabinet_01: 5 file(s) -> GothicCabinet_01_1k.gltf
+  [9/120] GothicCommode_01: 5 file(s) -> GothicCommode_01_1k.gltf
+  [10/120] GreenChair_01: 5 file(s) -> GreenChair_01_1k.gltf
+  [11/120] Ottoman_01: 5 file(s) -> Ottoman_01_1k.gltf
+  [12/120] Rockingchair_01: 5 file(s) -> Rockingchair_01_1k.gltf
+  [13/120] SchoolChair_01: 5 file(s) -> SchoolChair_01_1k.gltf
+  [14/120] SchoolDesk_01: 5 file(s) -> SchoolDesk_01_1k.gltf
+  [15/120] Shelf_01: 5 file(s) -> Shelf_01_1k.gltf
+  [16/120] Sofa_01: 5 file(s) -> Sofa_01_1k.gltf
+  [17/120] WoodenChair_01: 5 file(s) -> WoodenChair_01_1k.gltf
+  [18/120] WoodenTable_01: 5 file(s) -> WoodenTable_01_1k.gltf
+  [19/120] WoodenTable_02: 5 file(s) -> WoodenTable_02_1k.gltf
+  [20/120] WoodenTable_03: 5 file(s) -> WoodenTable_03_1k.gltf
+  [21/120] bar_chair_round_01: 5 file(s) -> bar_chair_round_01_1k.gltf
+  [22/120] chinese_armchair: 5 file(s) -> chinese_armchair_1k.gltf
+  [23/120] chinese_cabinet: 5 file(s) -> chinese_cabinet_1k.gltf
+  [24/120] chinese_commode: 5 file(s) -> chinese_commode_1k.gltf
+  [25/120] chinese_console_table: 5 file(s) -> chinese_console_table_1k.gltf
+  [26/120] chinese_screen_panels: 5 file(s) -> chinese_screen_panels_1k.gltf
+  [27/120] chinese_sofa: 5 file(s) -> chinese_sofa_1k.gltf
+  [28/120] chinese_stool: 5 file(s) -> chinese_stool_1k.gltf
+  [29/120] chinese_tea_table: 5 file(s) -> chinese_tea_table_1k.gltf
+  [30/120] coffee_table_round_01: 5 file(s) -> coffee_table_round_01_1k.gltf
+  [31/120] dining_chair_02: 5 file(s) -> dining_chair_02_1k.gltf
+  [32/120] drawer_cabinet: 5 file(s) -> drawer_cabinet_1k.gltf
+  [33/120] folding_wooden_stool: 5 file(s) -> folding_wooden_stool_1k.gltf
+  [34/120] gallinera_chair: 5 file(s) -> gallinera_chair_1k.gltf
+  [35/120] gallinera_table: 5 file(s) -> gallinera_table_1k.gltf
+  [36/120] gothic_coffee_table: 5 file(s) -> gothic_coffee_table_1k.gltf
+  [37/120] industrial_coffee_table: 5 file(s) -> industrial_coffee_table_1k.gltf
+  [38/120] industrial_storage_cart: 5 file(s) -> industrial_storage_cart_1k.gltf
+  [39/120] metal_office_desk: 5 file(s) -> metal_office_desk_1k.gltf
+  [40/120] metal_stool_01: 5 file(s) -> metal_stool_01_1k.gltf
+  [41/120] metal_stool_02: 5 file(s) -> metal_stool_02_1k.gltf
+  [42/120] metal_stool_03: 5 file(s) -> metal_stool_03_1k.gltf
+  [43/120] mid_century_lounge_chair: 5 file(s) -> mid_century_lounge_chair_1k.gltf
+  [44/120] modern_arm_chair_01: 8 file(s) -> modern_arm_chair_01_1k.gltf
+  [45/120] modern_coffee_table_01: 5 file(s) -> modern_coffee_table_01_1k.gltf
+  [46/120] modern_coffee_table_02: 8 file(s) -> modern_coffee_table_02_1k.gltf
+  [47/120] modern_wooden_cabinet: 5 file(s) -> modern_wooden_cabinet_1k.gltf
+  [48/120] modular_street_seating: 14 file(s) -> modular_street_seating_1k.gltf
+  [49/120] ornate_mirror_01: 5 file(s) -> ornate_mirror_01_1k.gltf
+  [50/120] outdoor_table_chair_set_01: 8 file(s) -> outdoor_table_chair_set_01_1k.gltf
+  [51/120] painted_wooden_bench: 5 file(s) -> painted_wooden_bench_1k.gltf
+  [52/120] painted_wooden_cabinet: 5 file(s) -> painted_wooden_cabinet_1k.gltf
+  [53/120] painted_wooden_cabinet_02: 5 file(s) -> painted_wooden_cabinet_02_1k.gltf
+  [54/120] painted_wooden_chair_01: 5 file(s) -> painted_wooden_chair_01_1k.gltf
+  [55/120] painted_wooden_chair_02: 5 file(s) -> painted_wooden_chair_02_1k.gltf
+  [56/120] painted_wooden_nightstand: 5 file(s) -> painted_wooden_nightstand_1k.gltf
+  [57/120] painted_wooden_shelves: 5 file(s) -> painted_wooden_shelves_1k.gltf
+  [58/120] painted_wooden_sofa: 5 file(s) -> painted_wooden_sofa_1k.gltf
+  [59/120] painted_wooden_stool: 5 file(s) -> painted_wooden_stool_1k.gltf
+  [60/120] painted_wooden_table: 5 file(s) -> painted_wooden_table_1k.gltf
+  [61/120] plastic_monobloc_chair_01: 5 file(s) -> plastic_monobloc_chair_01_1k.gltf
+  [62/120] round_wooden_table_01: 5 file(s) -> round_wooden_table_01_1k.gltf
+  [63/120] round_wooden_table_02: 5 file(s) -> round_wooden_table_02_1k.gltf
+  [64/120] side_table_01: 5 file(s) -> side_table_01_1k.gltf
+  [65/120] side_table_tall_01: 5 file(s) -> side_table_tall_01_1k.gltf
+  [66/120] small_wooden_table_01: 5 file(s) -> small_wooden_table_01_1k.gltf
+  [67/120] sofa_02: 5 file(s) -> sofa_02_1k.gltf
+  [68/120] sofa_03: 5 file(s) -> sofa_03_1k.gltf
+  [69/120] steel_frame_shelves_01: 5 file(s) -> steel_frame_shelves_01_1k.gltf
+  [70/120] steel_frame_shelves_02: 5 file(s) -> steel_frame_shelves_02_1k.gltf
+  [71/120] steel_frame_shelves_03: 8 file(s) -> steel_frame_shelves_03_1k.gltf
+  [72/120] stone_fire_pit: 5 file(s) -> stone_fire_pit_1k.gltf
+  [73/120] vintage_cabinet_01: 9 file(s) -> vintage_cabinet_01_1k.gltf
+  [74/120] vintage_wooden_drawer_01: 5 file(s) -> vintage_wooden_drawer_01_1k.gltf
+  [75/120] wooden_bookshelf_worn: 5 file(s) -> wooden_bookshelf_worn_1k.gltf
+  [76/120] wooden_display_shelves_01: 5 file(s) -> wooden_display_shelves_01_1k.gltf
+  [77/120] wooden_picnic_table: 8 file(s) -> wooden_picnic_table_1k.gltf
+  [78/120] wooden_stool_01: 5 file(s) -> wooden_stool_01_1k.gltf
+  [79/120] wooden_stool_02: 5 file(s) -> wooden_stool_02_1k.gltf
+  [80/120] wooden_table_02: 5 file(s) -> wooden_table_02_1k.gltf
+  [81/120] worn_metal_rack: 5 file(s) -> worn_metal_rack_1k.gltf
+  [82/120] CashRegister_01: 8 file(s) -> CashRegister_01_1k.gltf
+  [83/120] boombox: 7 file(s) -> boombox_1k.gltf
+  [84/120] ceiling_fan: 7 file(s) -> ceiling_fan_1k.gltf
+  [85/120] drill_press_01: 5 file(s) -> drill_press_01_1k.gltf
+  [86/120] electric_stove: 5 file(s) -> electric_stove_1k.gltf
+  [87/120] exterior_aircon_unit: 14 file(s) -> exterior_aircon_unit_1k.gltf
+  [88/120] filmstrip_projector_8mm: 5 file(s) -> filmstrip_projector_8mm_1k.gltf
+  [89/120] gaming_console: 6 file(s) -> gaming_console_1k.gltf
+  [90/120] garden_sprinkler_01: 5 file(s) -> garden_sprinkler_01_1k.gltf
+  [91/120] industrial_microscope: 5 file(s) -> industrial_microscope_1k.gltf
+  [92/120] mantel_clock_01: 5 file(s) -> mantel_clock_01_1k.gltf
+  [93/120] scandinavian_masonry_heater: 5 file(s) -> scandinavian_masonry_heater_1k.gltf
+  [94/120] security_camera_01: 5 file(s) -> security_camera_01_1k.gltf
+  [95/120] security_camera_02: 5 file(s) -> security_camera_02_1k.gltf
+  [96/120] vintage_electric_kettle: 5 file(s) -> vintage_electric_kettle_1k.gltf
+  [97/120] vintage_grandfather_clock_01: 5 file(s) -> vintage_grandfather_clock_01_1k.gltf
+  [98/120] vintage_radio_transceiver: 8 file(s) -> vintage_radio_transceiver_1k.gltf
+  [99/120] vintage_video_camera: 5 file(s) -> vintage_video_camera_1k.gltf
+  [100/120] wall_clock: 6 file(s) -> wall_clock_1k.gltf
+  [101/120] WetFloorSign_01: 5 file(s) -> WetFloorSign_01_1k.gltf
+  [102/120] classic_laptop: 5 file(s) -> classic_laptop_1k.gltf
+  [103/120] clipboard: 5 file(s) -> clipboard_1k.gltf
+  [104/120] fire_alarm: 5 file(s) -> fire_alarm_1k.gltf
+  [105/120] industrial_pastic_container: 5 file(s) -> industrial_pastic_container_1k.gltf
+  [106/120] office_notepads: 5 file(s) -> office_notepads_1k.gltf
+  [107/120] projector_screen: 8 file(s) -> projector_screen_1k.gltf
+  [108/120] stationery_supplies: 5 file(s) -> stationery_supplies_1k.gltf
+  [109/120] vintage_stapler: 5 file(s) -> vintage_stapler_1k.gltf
+  [110/120] Camera_01: 11 file(s) -> Camera_01_1k.gltf
+  [111/120] CheeseBox_01: 5 file(s) -> CheeseBox_01_1k.gltf
+  [112/120] Drill_01: 5 file(s) -> Drill_01_1k.gltf
+  [113/120] Lantern_01: 5 file(s) -> Lantern_01_1k.gltf
+  [114/120] Megaphone_01: 5 file(s) -> Megaphone_01_1k.gltf
+  [115/120] Television_01: 5 file(s) -> Television_01_1k.gltf
+  [116/120] Ukulele_01: 5 file(s) -> Ukulele_01_1k.gltf
+  [117/120] adjustable_wrench: 5 file(s) -> adjustable_wrench_1k.gltf
+  [118/120] alarm_clock_01: 5 file(s) -> alarm_clock_01_1k.gltf
+  [119/120] all_purpose_cleaner: 5 file(s) -> all_purpose_cleaner_1k.gltf
+  [120/120] american_football: 5 file(s) -> american_football_1k.gltf
+[done] assets in /Users/georgiitiutin/ProjectsRoot/Making Data/synth/assets
