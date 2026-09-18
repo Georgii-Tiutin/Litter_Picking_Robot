@@ -1,16 +1,9 @@
-# Litter Picking Robot — `main`
+# `navigation` — LiDAR mapping and arm-sweep floor mapping
 
-Default branch and planning home for the autonomous litter-pickup project, built on a Yahboom ROSMASTER M3PRO with a Jetson Orin NX.
+Work towards mapping the room with the M3PRO's two LiDARs and navigating point to point while avoiding obstacles.
 
-This branch deliberately holds the project **scaffolding and planning documents** rather than implementation code. It contains the hardware reference (`HARDWARE.md`), repo guidance (`CLAUDE.md`), shared launch files, and the `.claude/plans/` directory with the baseline project plan, the outdoor-grass extension plan, and the pre-work cleanup / gitflow notes.
-
-The actual modules live on dedicated branches:
-
-- **`calibration+detection`** — camera intrinsics, hand-eye + AprilTag calibration, OpenCV/HSV cube detectors
-- **`cube-detector-v1`** — the calibration + detection milestone (cube detector v1)
-- **`color-tracking`** — standalone Orin color-tracking script
-- **`yolo-detector`** — YOLO11n cuboid detector: training scripts, synthetic-data generator, every training run (including the ones that did worse) and the candidate models
-- **`navigation`** — LiDAR mapping / navigation plan and the arm-sweep floor-mapping scripts
-- **`arm-grasping`** — cuboid pose detection, wrist alignment, drive-up and grasp scripts, with the grasp plan and the record of what worked on the robot
-
-`PROJECT_PLAN.md` is the cuboid detection and grasping plan. `DATA_MANIFEST.md` lists the datasets, renders and videos that are kept locally rather than on GitHub.
+- `navigation/Nav_Plan.md` — the plan: LiDAR mapping and collision-free navigation (part 1), with the arm-sweep 3D room scan noted as deferred (part 2)
+- `navigation/lidar_viz.py` — merges `/scan0` and `/scan1` into `base_link` and renders a top-down PNG
+- `navigation/floor_sweep_map.py` — sweeps the arm left-right and stitches the eye-in-hand depth camera into a `/floor_map` point cloud (runs on the robot)
+- `navigation/arm_state_pub.py` — publishes `/joint_states` at the commanded arm pose so the RViz robot model matches the real (open-loop) arm
+- `navigation/lidar.rviz`, `navigation/floor_map.rviz` — RViz configs for the two views
