@@ -1,0 +1,45 @@
+--- a/M3Pro_demo/M3Pro_demo/color_transport.py
++++ b/M3Pro_demo/M3Pro_demo/color_transport.py
+@@ -80,6 +80,9 @@
+         
+ 		self.rgb_image_sub = Subscriber(self, Image, '/camera/color/image_raw')
+ 		self.sub_grasp_status = self.create_subscription(Bool,"grasp_done",self.get_graspStatusCallBack,100)
++		# remote colour selection - the robot has no keyboard when it is on the floor,
++		# so the r/g/b/y keys are unusable. 1=red 2=green 3=blue 4=yellow, 0=idle.
++		self.sub_target_color = self.create_subscription(Int16,"/target_color",self.get_TargetColorCallBack,10)
+ 		self.depth_image_sub = Subscriber(self, Image, '/camera/depth/image_raw')
+ 		self.CmdVel_pub = self.create_publisher(Twist,"cmd_vel",1)
+ 		self.pub_cur_joints = self.create_publisher(CurJoints,"Curjoints",1)
+@@ -243,6 +246,15 @@
+ 		self.camera_matrix = np.array(msg.k).reshape(3, 3)
+ 		self.dist_coeffs = np.array(msg.d)
+ 
++	def get_TargetColorCallBack(self,msg):
++		self.target_color = int(msg.data)
++		if self.target_color != 0:
++			self.Track_state = "identify"
++			self.pub_pos_flag = True
++			self.adjust_dist = True
++			self.valid_dist = True
++		print("REMOTE: target colour set to %d" % self.target_color)
++
+ 	def get_graspStatusCallBack(self,msg):
+ 		if msg.data == True:
+ 			#self.pub_pos_flag = True
+@@ -254,6 +266,16 @@
+ 			time.sleep(2.0)
+ 			self.pubVel(0,0,0.0)
+ 			self.Track_state = 'init'
++			# unload() is normally reached via /start_transport, and pub_pos_flag is
++			# re-armed via /transport_done - BOTH published by get_nav2_status_V2,
++			# which is not installed on this image. Without this the robot grasps one
++			# block, holds it forever, and never detects another.
++			print("AUTO: grasped - placing block for colour %d" % self.target_color)
++			self.unload()
++			self.pub_pos_flag = True
++			self.adjust_dist = True
++			self.valid_dist = True
++			print("AUTO: placed - ready for the next block.")
+ 			self.hsv_range = ()
+ 			self.target_color = 0
+ 

@@ -1,0 +1,75 @@
+--- a/M3Pro_demo/M3Pro_demo/apriltag_transport_V2.py
++++ b/M3Pro_demo/M3Pro_demo/apriltag_transport_V2.py
+@@ -133,6 +133,28 @@
+ 		if msg.data == True:
+ 			self.start_detect = True
+ 			print("Detect the tag.")
++			# AUTO: arrived at a waypoint -> chirp, then begin the rotation search
++			# automatically instead of waiting for the 'r' key. Guarded so that
++			# arriving back at the origin while carrying a block does NOT restart
++			# the hunt.
++			if self.come_back == True:
++				# Arrived home. unload() is normally triggered by get_nav2_status_V2,
++				# which is NOT installed on this image - so call it directly. It
++				# lowers to the drop pose, opens the gripper to 30 (wide), returns
++				# the arm to the detection pose, clears grasp_done and republishes
++				# /unload_done, which re-arms grasp_flag in grasp_transport.
++				self.come_back = False
++				print("AUTO: arrived home - unloading.")
++				self.unload()
++				print("AUTO: unload complete - ready for the next mission.")
++			elif self.grasp_done == False:
++				self.Beep_Short()
++				self.rotate = True
++				self.stop_rotate = False
++				start_rotate = Bool()
++				start_rotate.data = True
++				self.pub_start_rotate.publish(start_rotate)
++				print("AUTO: starting rotation search.")
+ 			print("Click on the image screen and press the following buttons to select the next step: ")
+ 			print("n to navigate to the next point")
+ 			print("b to come back to the origin") 
+@@ -204,6 +226,15 @@
+ 		self.y_track_done = False
+ 
+ 
++	def Beep_Short(self):
++		# short arrival chirp - Beep_Loop is 1.0 s which is too long for a cue
++		beep = UInt16()
++		beep.data = 1
++		self.pub_beep.publish(beep)
++		time.sleep(0.25)
++		beep.data = 0
++		self.pub_beep.publish(beep)
++
+ 	def Beep_Loop(self):
+ 		beep = UInt16()
+ 		beep.data = 1
+@@ -222,6 +253,27 @@
+ 			#self.pubPos_flag = True
+ 			#self.adjust_dist = True
+ 			self.grasp_done = True
++			# AUTO: block is gripped -> head straight back to the origin instead
++			# of waiting for the 'b' key.
++			self.Beep_Short()
++			self.rotate = False
++			self.start_detect = False
++			next_status = Int16()
++			next_status.data = 0
++			self.pub_status.publish(next_status)
++			self.come_back = True
++			back_orin = Bool()
++			back_orin.data = True
++			self.send_back2orin.publish(back_orin)
++			# /next_status and /back_orin are consumed by get_nav2_status_V2, which
++			# is NOT installed on this image - so drive the return directly by
++			# publishing the stored origin to /goal_pose (the vendor's own
++			# commented-out line 162 does exactly this).
++			self.orinal_pose.header.stamp = self.get_clock().now().to_msg()
++			for _ in range(3):
++				self.pub_orin_pose.publish(self.orinal_pose)
++			print("AUTO: grasped - returning to origin (%.2f, %.2f)." % (
++				self.orinal_pose.pose.position.x, self.orinal_pose.pose.position.y))
+ 			print("Click the rviz window with the mouse to give the next target point, or press the b key on the keyboard to return to the origin")
+ 
+ 	def pubSix_Arm(self, joints, id=6, angle=180.0, runtime=2000):

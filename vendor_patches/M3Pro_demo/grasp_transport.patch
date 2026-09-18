@@ -1,0 +1,23 @@
+--- a/M3Pro_demo/M3Pro_demo/grasp_transport.py
++++ b/M3Pro_demo/M3Pro_demo/grasp_transport.py
+@@ -50,7 +50,7 @@
+ 		print('init done')
+ 		self.cur_joints = self.init_joints
+ 		#self.get_current_end_pos()
+-		self.joint6 = 115
++		self.joint6 = 139   # 2026-09-07: 115 stock -> 120 (40mm cube) -> 132 -> 139 for 30x30x60mm blocks
+ 		self.cur_tagId = 0
+ 		self.x_offset = offset_config.get('x_offset')
+ 		self.y_offset = offset_config.get('y_offset')
+@@ -126,7 +126,10 @@
+ 		print("------------------------------------------------")
+ 		#print("pose_T: ",pose_T)
+ 		request = ArmKinemarics.Request()
+-		request.tar_x = pose_T[0] - 0.015 #1.02 
++		# 2026-09-07: was -0.015. Observed grasp stopping 1-1.5 cm short of the
++		# cube - exactly this margin. Halved to reach further while keeping some
++		# clearance so the arm does not drive through the object.
++		request.tar_x = pose_T[0] + 0.003 #1.02 
+ 		request.tar_y = pose_T[1] 
+ 		request.tar_z = pose_T[2] 
+ 		#print("request.tar_z: ",request.tar_z)
