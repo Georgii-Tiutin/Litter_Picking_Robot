@@ -1,0 +1,45 @@
+--- a/M3Pro_demo/M3Pro_demo/follow_line.py
++++ b/M3Pro_demo/M3Pro_demo/follow_line.py
+@@ -103,6 +103,9 @@
+ 		#self.ResponseDist = 0.25
+ 		self.front_warning = 0
+ 		self.Joy_active = False
++		# remote control: mirrors the cv2 keyboard so no keyboard is needed on the robot
++		self.remote_action = -1
++		self.sub_remote_key = self.create_subscription(Int16,"follow_line_key",self.remoteKeyCallback,10)
+ 		print("Init Done.")
+ 		print("----------------------------")
+ 		print("self.LaserAngle: ",self.LaserAngle)
+@@ -112,6 +115,22 @@
+ 		if not isinstance(msg, Bool): return
+ 		self.Joy_active = msg.data
+ 
++	def remoteKeyCallback(self, msg):
++		# 32=space/start, 105=i, 114=r, 113=q, 0=explicit stop
++		if msg.data == 0:
++			self.Track_state = "identify"
++			for i in range(5): self.pub_cmdVel.publish(Twist())
++			# execute() normally clears the buzzer, but it stops being called once
++			# tracking ends - so clear it here or it rings forever
++			b = UInt16()
++			b.data = 0
++			for i in range(3): self.pub_Buzzer.publish(b)
++			self.Buzzer_state = False
++			print("remote: STOP")
++		else:
++			self.remote_action = int(msg.data)
++			print("remote: action", msg.data)
++
+ 	def registerScan(self, scan_data):
+ 		self.front_warning = 0
+ 		if not isinstance(scan_data, LaserScan): return
+@@ -157,6 +176,9 @@
+ 		frame = cv2.resize(depth_image, (640, 480))
+ 		depth_image_info = frame.astype(np.float32)
+ 		action = cv2.waitKey(1)
++		if self.remote_action != -1:
++			action = self.remote_action
++			self.remote_action = -1
+ 		if self.count==True and self.Start_==True:
+ 			if (time.time() - self.start_time)>3:
+ 				self.Track_state = 'tracking'

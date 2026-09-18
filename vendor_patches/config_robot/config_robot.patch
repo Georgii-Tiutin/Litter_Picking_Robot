@@ -1,0 +1,13 @@
+--- a/config_robot.py
++++ b/config_robot.py
+@@ -550,8 +550,8 @@
+     # robot.set_motor_pid_parm(0.8, 0.06, 0.5)
+     # robot.set_imu_yaw_pid_parm(0.6, 0, 0.3)
+ 
+-    # robot.set_ros_scale_line(1.0)
+-    # robot.set_ros_scale_angular(1.0)
++    # robot.set_ros_scale_line(1.0)   # REVERTED 2026-09-05: 1.1 was compensating deceleration coast, not odom scale
++    # robot.set_ros_scale_angular(1.06)   # 2026-09-06 FINAL: 1.04 gave no improvement (10-15cm vs 10cm); 1.06 is the validated value
+ 
+     # arm_mid_value = [2000, 2000, 2000, 2000, 1486, 3100]
+     # robot.set_arm_mid_value(arm_mid_value)

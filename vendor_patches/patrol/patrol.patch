@@ -1,0 +1,50 @@
+--- a/patrol/patrol.py
++++ b/patrol/patrol.py
+@@ -58,6 +58,7 @@
+         self.last_angle = 0.0
+         self.delta_angle = 0.0
+         self.turn_angle = 0.0
++        self.spin_fresh = True   # True = next Spin() tick begins a new turn
+         # create publisher
+         self.pub_cmdVel = self.create_publisher(Twist, "/cmd_vel", 5)
+         # create subscriber
+@@ -201,6 +202,17 @@
+             self.pub_cmdVel.publish(Twist())
+             self.pub_beep.publish(UInt16(data=0))            
+             self.get_logger().info("Switch False")
++            # Keep the run origin fresh while idle. x_start/y_start are otherwise
++            # only updated inside the SUCCESS branch of advancing(), so any run
++            # that fails to stop leaves them stale and the next run begins with a
++            # large apparent distance it can never satisfy - it just drives away.
++            try:
++                trans = self.get_position()
++                if trans is not None:
++                    self.x_start = trans.transform.translation.x
++                    self.y_start = trans.transform.translation.y
++            except Exception:
++                pass
+             if self.Command == "finish":
+                 self.get_logger().info("finish")
+                 if self.Set_loop == True:
+@@ -265,6 +277,13 @@
+     def Spin(self, angle):
+         self.target_angle = radians(angle)
+         self.odom_angle = self.get_odom_angle()
++        # Spin() is only called during corners, so last_angle goes stale along the
++        # straight sides. Without this, the first delta of each corner is the
++        # PREVIOUS corner's spin-down coast plus any drift, which is counted as
++        # progress and makes corners 2..n stop short by exactly that amount.
++        if self.spin_fresh:
++            self.last_angle = self.odom_angle
++            self.spin_fresh = False
+         self.delta_angle = self.RotationScaling * self.normalize_angle(
+             self.odom_angle - self.last_angle
+         )
+@@ -278,6 +297,7 @@
+         if abs(self.error) < self.RotationTolerance or self.Switch == False:
+             self.pub_cmdVel.publish(Twist())
+             self.turn_angle = 0.0
++            self.spin_fresh = True
+             """self.Switch  = rclpy.parameter.Parameter('Switch',rclpy.Parameter.Type.BOOL,False)
+             all_new_parameters = [self.Switch]
+             self.set_parameters(all_new_parameters)"""

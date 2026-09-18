@@ -1,0 +1,49 @@
+--- a/calibration/calibrate_angular.py
++++ b/calibration/calibrate_angular.py
+@@ -53,7 +53,7 @@
+         self.position = Point()
+         self.x_start = self.position.x
+         self.y_start = self.position.y
+-        self.first_angle = 0
++        self.first_angle = None
+ 
+ 
+         print ("finish init work",flush=True)
+@@ -85,7 +85,10 @@
+                 move_cmd.angular.z = copysign(self.speed, self.error)
+                 #print("angular: ",move_cmd.angular.z)
+                 self.cmd_vel.publish(move_cmd)
+-                self.odom_angle = self.get_odom_angle() 
++                self.odom_angle = self.get_odom_angle()
++                if self.odom_angle is None or self.first_angle is None:
++                    self.first_angle = self.odom_angle
++                    return
+                 self.delta_angle = self.odom_angular_scale_correction * self.normalize_angle(self.odom_angle - self.first_angle)
+                 #print("delta_angle: ",self.delta_angle)
+                 self.turn_angle += self.delta_angle
+@@ -99,7 +102,7 @@
+                 self.error = 0.0
+                 self.turn_angle = 0.0
+                 print("done",flush=True)
+-                self.first_angle = 0
++                self.first_angle = self.get_odom_angle()
+                 self.reverse = -self.reverse
+                 self.start_test  = rclpy.parameter.Parameter('start_test',rclpy.Parameter.Type.BOOL,False)
+                 all_new_parameters = [self.start_test]
+@@ -108,6 +111,7 @@
+             self.error = 0.0
+             self.cmd_vel.publish(Twist())
+             self.turn_angle = 0.0
++            self.first_angle = self.get_odom_angle()
+             self.start_test  = rclpy.parameter.Parameter('start_test',rclpy.Parameter.Type.BOOL,False)           
+             all_new_parameters = [self.start_test]
+             self.set_parameters(all_new_parameters)
+@@ -152,7 +156,7 @@
+     except KeyboardInterrupt:
+         pass
+     finally:
+-        class_calibrateangular.cmd_vel().publish(Twist())
++        class_calibrateangular.cmd_vel.publish(Twist())
+         class_calibrateangular.destroy_node()
+         rclpy.shutdown()
+     

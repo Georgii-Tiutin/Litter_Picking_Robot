@@ -1,0 +1,39 @@
+--- a/calibration/calibrate_linear.py
++++ b/calibration/calibrate_linear.py
+@@ -72,8 +72,12 @@
+                         now,
+                         )'''
+ 
+-            self.position.x = self.get_position().transform.translation.x
+-            self.position.y = self.get_position().transform.translation.y
++            trans = self.get_position()
++            if trans is None:
++                self.cmd_vel.publish(Twist())
++                return
++            self.position.x = trans.transform.translation.x
++            self.position.y = trans.transform.translation.y
+ 
+             self.get_logger().info(f"self.position.x: {self.position.x}")
+             self.get_logger().info(f"self.position.y: {self.position.y}")
+@@ -87,7 +91,7 @@
+ 
+             self.get_logger().info(f"error: {error}")            
+ 
+-            if abs(error) < self.tolerance:
++            if error >= -self.tolerance:   # forward-only: overshoot ends the run, never reverses
+                 self.start_test  = rclpy.parameter.Parameter('start_test',rclpy.Parameter.Type.BOOL,False)
+                 all_new_parameters = [self.start_test]
+                 self.set_parameters(all_new_parameters)
+@@ -103,8 +107,10 @@
+             #end = time()
+         else:
+ 
+-            self.x_start = self.get_position().transform.translation.x
+-            self.y_start = self.get_position().transform.translation.y
++            trans = self.get_position()
++            if trans is not None:
++                self.x_start = trans.transform.translation.x
++                self.y_start = trans.transform.translation.y
+ 
+             self.get_logger().info(f"self.x_start: {self.x_start}") 
+             self.get_logger().info(f"self.y_start: {self.y_start}") 
